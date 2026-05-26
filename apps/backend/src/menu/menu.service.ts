@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { MenuItem } from './entities/menu-item.entity';
 
-export type MenuItem = {
+export type MenuItemType = {
   id: number;
   name: string;
   price: number;
@@ -9,39 +12,31 @@ export type MenuItem = {
 
 @Injectable()
 export class MenuService {
-  private menu: MenuItem[] = [
-    { id: 1, name: 'Espresso', price: 20000, description: 'Single shot' },
-    { id: 2, name: 'Cappuccino', price: 28000, description: 'Milk foam' },
-    { id: 3, name: 'Latte', price: 30000, description: 'Smooth milk' },
-    { id: 4, name: 'Croissant', price: 25000, description: 'Buttery pastry' },
-  ];
+  constructor(
+    @InjectRepository(MenuItem)
+    private readonly menuRepository: Repository<MenuItem>,
+  ) {}
 
-  findAll(): MenuItem[] {
-    return this.menu;
+  async findAll(): Promise<MenuItem[]> {
+    return this.menuRepository.find({ order: { id: 'ASC' } });
   }
 
-  findById(id: number): MenuItem | undefined {
-    return this.menu.find((m) => m.id === id);
+  async findById(id: number): Promise<MenuItem | null> {
+    return this.menuRepository.findOne({ where: { id } });
   }
 
-  create(data: Omit<MenuItem, 'id'>): MenuItem {
-    const id = Math.max(...this.menu.map((m) => m.id), 0) + 1;
-    const newItem: MenuItem = { id, ...data };
-    this.menu.push(newItem);
-    return newItem;
+  async create(data: Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<MenuItem> {
+    const item = this.menuRepository.create(data);
+    return this.menuRepository.save(item);
   }
 
-  update(id: number, data: Partial<MenuItem>): MenuItem | undefined {
-    const item = this.menu.find((m) => m.id === id);
-    if (!item) return undefined;
-    Object.assign(item, data);
-    return item;
+  async update(id: number, data: Partial<MenuItem>): Promise<MenuItem | null> {
+    await this.menuRepository.update(id, data);
+    return this.menuRepository.findOne({ where: { id } });
   }
 
-  delete(id: number): boolean {
-    const idx = this.menu.findIndex((m) => m.id === id);
-    if (idx === -1) return false;
-    this.menu.splice(idx, 1);
-    return true;
+  async delete(id: number): Promise<boolean> {
+    const result = await this.menuRepository.delete(id);
+    return result.affected! > 0;
   }
 }

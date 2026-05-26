@@ -1,73 +1,67 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { MenuService } from '../menu/menu.service';
 import { CreateOrderDto } from './dto/create-order.dto';
-
-export type OrderItem = {
-  menuId: number;
-  quantity: number;
-  note?: string;
-};
-
-export type Order = {
-  id: number;
-  table?: string;
-  items: OrderItem[];
-  status: 'received' | 'preparing' | 'ready' | 'served';
-  total: number;
-};
+import { Order } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
-  private orders: Order[] = [];
-  private nextId = 1;
+  constructor(
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+    private readonly menuService: MenuService,
+  ) {}
 
-  constructor(private readonly menuService: MenuService) {}
-
-  create(order: CreateOrderDto) {
+  async create(order: CreateOrderDto) {
     // validate menu items and compute total
     let total = 0;
     for (const it of order.items) {
-      const menuItem = this.menuService.findById(it.menuId);
+      const menuItem = await this.menuService.findById(it.menuId);
       if (!menuItem) {
         throw new BadRequestException(`menuId ${it.menuId} not found`);
       }
       total += menuItem.price * it.quantity;
     }
 
-    const id = this.nextId++;
-    const newOrder: Order = {
-      id,
+    const newOrder = this.orderRepository.create({
       table: order.table,
-      items: order.items as OrderItem[],
+      items: order.items as any,
       status: 'received',
       total,
-    };
-    this.orders.push(newOrder);
-    return this.enrichOrder(newOrder);
+    });
+    const saved = await this.orderRepository.save(newOrder);
+    return this.enrichOrder(saved);
   }
 
-  private enrichOrder(order: Order) {
-    return {
-      ...order,
-      items: order.items.map((it) => ({
-        ...it,
-        name: this.menuService.findById(it.menuId)?.name || 'Unknown',
-      })),
-    };
-  }
-
-  findById(id: number) {
-    const order = this.orders.find((o) => o.id === id);
+  async findById(id: number) {
+    const order = await this.orderRepository.findOne({ where: { id } });
     return order ? this.enrichOrder(order) : undefined;
   }
 
-  list() {
-    return this.orders.map((o) => this.enrichOrder(o));
+  async list() {
+    const orders = await this.orderRepository.find({ order: { id: 'DESC' } });
+    return Promise.all(orders.map((o) => this.enrichOrder(o)));
   }
-  updateStatus(id: number, status: Order['status']) {
-    const order = this.orders.find((o) => o.id === id);
+
+  async updateStatus(id: number, status: Order['status']) {
+    const order = await this.orderRepository.findOne({ where: { id } });
     if (!order) return undefined;
     order.status = status;
-    return this.enrichOrder(order);
+    const updated = await this.orderRepository.save(order);
+    return this.enrichOrder(updated);
+  }
+
+  private async enrichOrder(order: Order) {
+    const items = await Promise.all(
+      order.items.map(async (it: any) => {
+        const menuItem = await this.menuService.findById(it.menuId);
+        return {
+          ...it,
+          name: menuItem?.name || 'Unknown',
+        };
+      }),
+    );
+    return { ...order, items };
   }
 }
