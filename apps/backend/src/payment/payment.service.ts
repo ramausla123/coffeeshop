@@ -12,6 +12,12 @@ export class PaymentService {
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
   ) {
+    console.log('Initializing Midtrans with:');
+    console.log('Server Key length:', process.env.MIDTRANS_SERVER_KEY?.length);
+    console.log('Server Key:', process.env.MIDTRANS_SERVER_KEY);
+    console.log('Client Key length:', process.env.MIDTRANS_CLIENT_KEY?.length);
+    console.log('Environment:', process.env.MIDTRANS_ENVIRONMENT);
+    
     this.snap = new midtransClient.Snap({
       isProduction: process.env.MIDTRANS_ENVIRONMENT === 'production',
       serverKey: process.env.MIDTRANS_SERVER_KEY,

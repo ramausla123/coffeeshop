@@ -14,7 +14,7 @@ export default function Home() {
     // Load Midtrans Snap script
     const script = document.createElement('script')
     script.src = 'https://app.sandbox.midtrans.com/snap/snap.js'
-    script.setAttribute('data-client-key', 'SB-Mid-client-yXjJhWJw9XN0jJdJ')
+    script.setAttribute('data-client-key', 'Mid-client-vP_UwvseNi4_qocT')
     document.body.appendChild(script)
 
     fetch('http://localhost:4000/menu')
@@ -94,7 +94,7 @@ export default function Home() {
     <>
       <Head>
         <script src="https://app.sandbox.midtrans.com/snap/snap.js" 
-          data-client-key="SB-Mid-client-yXjJhWJw9XN0jJdJ"></script>
+          data-client-key="Mid-client-vP_UwvseNi4_qocT"></script>
       </Head>
       <main style={{ padding: 24, fontFamily: 'Inter, system-ui' }}>
         <h1>Coffee PWA — Table Ordering</h1>
