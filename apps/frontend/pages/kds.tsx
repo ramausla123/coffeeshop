@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -40,7 +40,7 @@ function playNotificationSound() {
 export default function KDS() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
-  const [prevOrderIds, setPrevOrderIds] = useState<Set<number>>(new Set());
+  const notifiedOrderIds = useRef<Set<number>>(new Set());
 
   async function fetchOrders() {
     setLoading(true);
@@ -48,11 +48,11 @@ export default function KDS() {
     const data = await res.json();
     
     // Detect new orders
-    const newOrderIds = new Set(data.map((o: Order) => o.id));
-    const newOrders = data.filter((o: Order) => !prevOrderIds.has(o.id));
+    const newOrders = data.filter((o: Order) => !notifiedOrderIds.current.has(o.id));
     
     if (newOrders.length > 0) {
       newOrders.forEach((order: Order) => {
+        notifiedOrderIds.current.add(order.id);
         playNotificationSound();
         const itemsDesc = order.items.map((i: OrderItem) => `${i.name} x${i.quantity}`).join(', ');
         toast.info(
@@ -62,7 +62,6 @@ export default function KDS() {
       });
     }
     
-    setPrevOrderIds(newOrderIds);
     setOrders(data);
     setLoading(false);
   }
