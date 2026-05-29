@@ -1,0 +1,12 @@
+{
+  "name": "coffee-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --workspace=coffee-frontend run dev",
+    "dev:backend": "npm --workspace=coffee-backend run start:dev"
+  }
+}

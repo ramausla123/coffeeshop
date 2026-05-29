@@ -1,0 +1,26 @@
+[33mcommit 067a3c7d4187cdacd1c2cf3e773a4525af07cd05[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: Coffee Dev Team <dev@coffeeshop.local>
+Date:   Fri May 29 14:42:53 2026 +0800
+
+    Add Midtrans Sandbox payment integration
+    
+    Backend:
+    - Install midtrans-client library
+    - Add PaymentService for transaction creation & callback handling
+    - Create PaymentController with endpoints: POST /payment/create/:orderId, POST /payment/callback, GET /payment/status/:orderId
+    - Extend Order entity with payment fields: paymentStatus, paymentMethod, paymentToken, transactionId
+    - Add PaymentModule to app.module.ts
+    - Configure Midtrans sandbox credentials in .env
+    
+    Frontend:
+    - Integrate Midtrans Snap.js script
+    - Add 'Pay with Midtrans' button after order placement
+    - Show payment status in order confirmation
+    - Add types/midtrans.d.ts for TypeScript support
+    
+    Database:
+    - Order table auto-synced with new payment fields on next startup
+    
+    Testing:
+    - Use sandbox card: 4111 1111 1111 1111
+    - Try payment flow from ordering page
