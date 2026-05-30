@@ -1,3 +1,6 @@
+import { apiUrl } from './api';
+import type { AuthUser, UserRole } from '../types';
+
 export function getToken() {
   if (typeof window === 'undefined') return null;
   return window.localStorage.getItem('coffee_auth_token');
@@ -18,8 +21,6 @@ export function authHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-export type UserRole = 'admin' | 'kitchen' | 'cashier';
-
 export function getRoleFromToken(token: string): UserRole | null {
   try {
     const payload = token.split('.')[1];
@@ -32,4 +33,16 @@ export function getRoleFromToken(token: string): UserRole | null {
   } catch {
     return null;
   }
+}
+
+export async function fetchProfile(): Promise<AuthUser> {
+  const res = await fetch(apiUrl('/auth/profile'), {
+    headers: authHeaders(),
+  });
+
+  if (!res.ok) {
+    throw new Error('Invalid session');
+  }
+
+  return res.json();
 }

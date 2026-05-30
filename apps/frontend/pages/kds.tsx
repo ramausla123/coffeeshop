@@ -2,23 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { authHeaders, clearToken, getRoleFromToken, getToken } from '../lib/auth';
+import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
-
-interface OrderItem {
-  menuId: number;
-  name?: string;
-  quantity: number;
-  note?: string;
-}
-
-interface Order {
-  id: number;
-  table?: string;
-  items: OrderItem[];
-  status: 'received' | 'preparing' | 'ready' | 'served';
-  total: number;
-}
+import type { Order } from '../types';
 
 const statusFlow = ['received', 'preparing', 'ready', 'served'] as const;
 const activeStatuses = ['received', 'preparing', 'ready'] as const;
@@ -78,12 +64,6 @@ export default function KDS() {
       return;
     }
 
-    const role = getRoleFromToken(token);
-    if (role === 'cashier') {
-      router.push('/admin');
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
@@ -125,9 +105,34 @@ export default function KDS() {
   }
 
   useEffect(() => {
-    fetchOrders();
-    const intv = setInterval(fetchOrders, 3000);
-    return () => clearInterval(intv);
+    let intv: ReturnType<typeof setInterval> | undefined;
+    let mounted = true;
+
+    async function startKds() {
+      try {
+        const profile = await fetchProfile();
+        if (!mounted) return;
+
+        if (profile.role !== 'admin' && profile.role !== 'kitchen') {
+          clearToken();
+          router.push('/login');
+          return;
+        }
+
+        await fetchOrders();
+        intv = setInterval(fetchOrders, 3000);
+      } catch {
+        clearToken();
+        router.push('/login');
+      }
+    }
+
+    startKds();
+
+    return () => {
+      mounted = false;
+      if (intv) clearInterval(intv);
+    };
   }, []);
 
   async function nextStatus(order: Order) {

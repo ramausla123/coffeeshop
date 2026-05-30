@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { apiUrl } from '../lib/api'
+import type { MenuItem } from '../types'
 
-type MenuItem = { id: number; name: string; price: number; description?: string }
 type CartItem = { id: number; menuId: number; name: string; price: number; qty: number }
 
 const currency = new Intl.NumberFormat('id-ID', {

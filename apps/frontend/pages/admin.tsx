@@ -1,21 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { authHeaders, clearToken, getRoleFromToken, getToken } from '../lib/auth';
+import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
-
-interface MenuItem {
-  id: number;
-  name: string;
-  price: number;
-  description?: string;
-}
-
-interface Order {
-  id: number;
-  table?: string;
-  status: 'received' | 'preparing' | 'ready' | 'served';
-  total: number;
-}
+import type { MenuItem, Order } from '../types';
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -52,20 +39,35 @@ export default function Admin() {
   }, [orders]);
 
   useEffect(() => {
+    validateAccess();
+  }, []);
+
+  async function validateAccess() {
     const token = getToken();
     if (!token) {
       router.push('/login');
       return;
     }
 
-    const role = getRoleFromToken(token);
-    if (role === 'kitchen') {
-      router.push('/kds');
-      return;
-    }
+    try {
+      const profile = await fetchProfile();
+      if (profile.role === 'kitchen') {
+        router.push('/kds');
+        return;
+      }
 
-    fetchData();
-  }, []);
+      if (profile.role !== 'admin') {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      fetchData();
+    } catch {
+      clearToken();
+      router.push('/login');
+    }
+  }
 
   async function fetchData() {
     setLoading(true);
