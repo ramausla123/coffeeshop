@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import { apiUrl } from '../lib/api'
 import type { MenuItem } from '../types'
 
-type CartItem = { id: number; menuId: number; name: string; price: number; qty: number }
+type CartItem = { id: number; menuId: number; name: string; price: number; qty: number; note: string }
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -61,7 +61,7 @@ export default function Home() {
         )
       }
 
-      return [...current, { id: Date.now(), menuId: item.id, name: item.name, price: item.price, qty: 1 }]
+      return [...current, { id: Date.now(), menuId: item.id, name: item.name, price: item.price, qty: 1, note: '' }]
     })
   }
 
@@ -81,6 +81,10 @@ export default function Home() {
     setCart((current) => current.filter((item) => item.id !== id))
   }
 
+  function updateNote(id: number, note: string) {
+    setCart((current) => current.map((item) => (item.id === id ? { ...item, note } : item)))
+  }
+
   async function placeOrder() {
     if (cart.length === 0 || placingOrder) return
 
@@ -89,7 +93,11 @@ export default function Home() {
 
     const body = {
       table: table.trim() || undefined,
-      items: cart.map((item) => ({ menuId: item.menuId, quantity: item.qty })),
+      items: cart.map((item) => ({
+        menuId: item.menuId,
+        quantity: item.qty,
+        note: item.note.trim() || undefined,
+      })),
     }
 
     try {
@@ -233,6 +241,13 @@ export default function Home() {
                       Hapus
                     </button>
                   </div>
+                  <input
+                    className="noteInput"
+                    value={item.note}
+                    onChange={(event) => updateNote(item.id, event.target.value)}
+                    placeholder="Catatan item, misal: less sugar"
+                    aria-label={`Catatan untuk ${item.name}`}
+                  />
                 </div>
               ))}
             </div>
@@ -308,6 +323,11 @@ export default function Home() {
           border-radius: 8px;
           padding: 0 12px;
           font: inherit;
+        }
+
+        .noteInput {
+          min-height: 38px;
+          font-size: 14px;
         }
 
         .alert,
