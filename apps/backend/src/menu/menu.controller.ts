@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, BadRequestException, UseGuards } from '@nestjs/common';
 import { MenuService } from './menu.service';
-import { MenuItem } from './entities/menu-item.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateMenuItemDto } from './dto/create-menu-item.dto';
+import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 
 @Controller('menu')
 export class MenuController {
@@ -17,15 +18,15 @@ export class MenuController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post()
-  async create(@Body() body: any) {
-    if (!body.name || !body.price) throw new BadRequestException('name and price required');
+  async create(@Body() body: CreateMenuItemDto) {
     return this.menuService.create(body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() body: Partial<MenuItem>) {
+  async update(@Param('id') id: string, @Body() body: UpdateMenuItemDto) {
+    if (Object.keys(body).length === 0) throw new BadRequestException('No fields to update');
     const item = await this.menuService.update(Number(id), body);
     if (!item) throw new BadRequestException('Menu item not found');
     return item;

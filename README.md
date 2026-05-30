@@ -13,6 +13,7 @@ Create `.env` in `apps/backend`:
 ```env
 DB_TYPE=sqlite
 DB_PATH=./coffee.db
+JWT_SECRET=change-this-secret
 NODE_ENV=development
 ```
 
