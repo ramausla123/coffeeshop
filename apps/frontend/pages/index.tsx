@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import { apiUrl } from '../lib/api'
 
 type MenuItem = { id: number; name: string; price: number; description?: string }
@@ -11,6 +12,7 @@ const currency = new Intl.NumberFormat('id-ID', {
 })
 
 export default function Home() {
+  const router = useRouter()
   const [menu, setMenu] = useState<MenuItem[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [table, setTable] = useState('')
@@ -24,6 +26,13 @@ export default function Home() {
   useEffect(() => {
     fetchMenu()
   }, [])
+
+  useEffect(() => {
+    const tableQuery = router.query.table
+    if (typeof tableQuery === 'string') {
+      setTable(tableQuery)
+    }
+  }, [router.query.table])
 
   async function fetchMenu() {
     setLoadingMenu(true)

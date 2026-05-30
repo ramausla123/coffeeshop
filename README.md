@@ -71,3 +71,13 @@ npm run start:dev
 - Database: auto-sync in development
 
 See [DATABASE.md](DATABASE.md) for database notes and seeding.
+
+## Table QR Links
+
+The ordering page can prefill the table number from a query parameter:
+
+```text
+http://localhost:3000/?table=T1
+```
+
+After deployment, generate each table QR from the production URL, for example `https://your-domain.com/?table=T1`.
