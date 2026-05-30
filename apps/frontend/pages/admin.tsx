@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { authHeaders, clearToken, getToken } from '../lib/auth';
 
 interface MenuItem {
   id: number;
@@ -15,24 +17,40 @@ interface Order {
 }
 
 export default function Admin() {
+  const router = useRouter();
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [formData, setFormData] = useState({ name: '', price: 0, description: '' });
   const [editId, setEditId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!getToken()) {
+      router.push('/login');
+      return;
+    }
     fetchMenu();
     fetchOrders();
   }, []);
 
   async function fetchMenu() {
-    const res = await fetch('http://localhost:4000/menu');
+    const res = await fetch('http://localhost:4000/menu', {
+      headers: { ...authHeaders() },
+    });
+    if (res.status === 401) {
+      return router.push('/login');
+    }
     const data = await res.json();
     setMenu(data);
   }
 
   async function fetchOrders() {
-    const res = await fetch('http://localhost:4000/orders');
+    const res = await fetch('http://localhost:4000/orders', {
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    });
+    if (res.status === 401) {
+      return router.push('/login');
+    }
     const data = await res.json();
     setOrders(data);
   }
@@ -41,33 +59,49 @@ export default function Admin() {
     e.preventDefault();
     if (!formData.name || formData.price <= 0) return;
 
-    if (editId) {
-      await fetch(`http://localhost:4000/menu/${editId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-      setEditId(null);
-    } else {
-      await fetch('http://localhost:4000/menu', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+    const url = editId ? `http://localhost:4000/menu/${editId}` : 'http://localhost:4000/menu';
+    const method = editId ? 'PATCH' : 'POST';
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(formData),
+    });
+
+    if (res.status === 401) {
+      return router.push('/login');
     }
+    if (!res.ok) {
+      setError('Gagal menyimpan item menu. Pastikan Anda login sebagai admin.');
+      return;
+    }
+
+    setEditId(null);
     setFormData({ name: '', price: 0, description: '' });
+    setError(null);
     fetchMenu();
   }
 
   async function handleDelete(id: number) {
     if (!confirm('Hapus item menu?')) return;
-    await fetch(`http://localhost:4000/menu/${id}`, { method: 'DELETE' });
+    const res = await fetch(`http://localhost:4000/menu/${id}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    if (res.status === 401) {
+      return router.push('/login');
+    }
     fetchMenu();
   }
 
   function handleEdit(item: MenuItem) {
     setFormData({ name: item.name, price: item.price, description: item.description || '' });
     setEditId(item.id);
+  }
+
+  function handleLogout() {
+    clearToken();
+    router.push('/login');
   }
 
   const totalSales = orders.reduce((s, o) => s + o.total, 0);
@@ -80,7 +114,12 @@ export default function Admin() {
 
   return (
     <main style={{ padding: 32, fontFamily: 'Inter, system-ui', maxWidth: 1200, margin: '0 auto' }}>
-      <h1>Admin Dashboard</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <h1>Admin Dashboard</h1>
+        <button onClick={handleLogout}>Logout</button>
+      </div>
+
+      {error && <div style={{ marginBottom: 16, color: 'red' }}>{error}</div>}
 
       <section style={{ marginBottom: 40 }}>
         <h2>Menu Management</h2>

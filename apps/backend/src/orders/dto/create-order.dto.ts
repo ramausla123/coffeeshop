@@ -4,11 +4,11 @@ import { IsArray, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class
 export class CreateOrderItemDto {
   @IsInt()
   @Min(1)
-  menuId: number;
+  menuId!: number;
 
   @IsInt()
   @Min(1)
-  quantity: number;
+  quantity!: number;
 
   @IsOptional()
   @IsString()
@@ -23,5 +23,5 @@ export class CreateOrderDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
-  items: CreateOrderItemDto[];
+  items!: CreateOrderItemDto[];
 }

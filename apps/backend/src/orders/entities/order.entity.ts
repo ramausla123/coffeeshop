@@ -3,44 +3,44 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateCol
 @Entity('order_items')
 export class OrderItem {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'integer' })
-  orderId: number;
+  orderId!: number;
 
   @Column({ type: 'integer' })
-  menuId: number;
+  menuId!: number;
 
   @Column({ type: 'integer' })
-  quantity: number;
+  quantity!: number;
 
   @Column({ type: 'text', nullable: true })
   note?: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }
 
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   table?: string;
 
   @Column('simple-json')
-  items: OrderItem[];
+  items!: OrderItem[];
 
   @Column({ type: 'varchar', length: 50, default: 'received' })
-  status: 'received' | 'preparing' | 'ready' | 'served';
+  status!: 'received' | 'preparing' | 'ready' | 'served';
 
   @Column({ type: 'integer' })
-  total: number;
+  total!: number;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

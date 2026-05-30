@@ -1,6 +1,9 @@
-import { Body, Controller, Get, Param, Post, Patch, UsePipes, ValidationPipe, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Patch, UsePipes, ValidationPipe, BadRequestException, UseGuards } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('orders')
 export class OrdersController {
@@ -18,11 +21,15 @@ export class OrdersController {
     return order ?? { error: 'not_found' };
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'kitchen')
   @Get()
   async list() {
     return this.ordersService.list();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'kitchen')
   @Patch(':id/status')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     const valid = ['received', 'preparing', 'ready', 'served'];
