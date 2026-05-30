@@ -139,12 +139,26 @@ export default function Home() {
       )}
 
       {orderResult && (
-        <div className="success">
-          <div>
-            <strong>Order #{orderResult.id} berhasil dibuat</strong>
-            <span>Status: {orderResult.status}</span>
+        <div className="success orderSummary">
+          <div className="orderSummaryHead">
+            <div>
+              <strong>Order #{orderResult.id} berhasil dibuat</strong>
+              <span>Status: {orderResult.status}</span>
+            </div>
+            <strong>{currency.format(orderResult.total)}</strong>
           </div>
-          <strong>{currency.format(orderResult.total)}</strong>
+          {orderResult.items?.length > 0 && (
+            <ul>
+              {orderResult.items.map((item: any, index: number) => (
+                <li key={`${item.menuId}-${index}`}>
+                  <span>
+                    {item.name || 'Item'} x {item.quantity}
+                  </span>
+                  {item.note && <em>{item.note}</em>}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -322,6 +336,40 @@ export default function Home() {
         .success div {
           display: grid;
           gap: 4px;
+        }
+
+        .orderSummary {
+          display: grid;
+          align-items: stretch;
+        }
+
+        .orderSummaryHead {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .orderSummary ul {
+          display: grid;
+          gap: 6px;
+          margin: 12px 0 0;
+          padding: 12px 0 0;
+          border-top: 1px solid #cdebd7;
+          list-style: none;
+        }
+
+        .orderSummary li {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          font-size: 14px;
+        }
+
+        .orderSummary em {
+          color: #3f7a55;
+          font-style: normal;
         }
 
         .content {
@@ -502,6 +550,11 @@ export default function Home() {
 
           .cartPanel {
             position: static;
+          }
+
+          .orderSummaryHead {
+            align-items: flex-start;
+            flex-direction: column;
           }
         }
       `}</style>

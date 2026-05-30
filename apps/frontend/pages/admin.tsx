@@ -321,6 +321,7 @@ export default function Admin() {
                 <tr>
                   <th>Order</th>
                   <th>Meja</th>
+                  <th>Item</th>
                   <th>Status</th>
                   <th>Total</th>
                 </tr>
@@ -331,6 +332,15 @@ export default function Admin() {
                     <td>#{order.id}</td>
                     <td>{order.table || '-'}</td>
                     <td>
+                      <div className="orderItems">
+                        {order.items?.map((item, index) => (
+                          <span key={`${order.id}-${item.menuId}-${index}`}>
+                            {item.name || 'Item'} x{item.quantity}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
                       <span className={`status ${order.status}`}>{order.status}</span>
                     </td>
                     <td>{currency.format(order.total)}</td>
@@ -338,7 +348,7 @@ export default function Admin() {
                 ))}
                 {!loading && filteredOrders.length === 0 && (
                   <tr>
-                    <td colSpan={4}>Tidak ada order untuk filter ini.</td>
+                    <td colSpan={5}>Tidak ada order untuk filter ini.</td>
                   </tr>
                 )}
               </tbody>
@@ -489,6 +499,14 @@ export default function Admin() {
 
         .danger {
           color: #8a1f1f;
+        }
+
+        .orderItems {
+          display: grid;
+          gap: 4px;
+          min-width: 180px;
+          color: #344054;
+          font-size: 14px;
         }
 
         .filterGroup button.active {
