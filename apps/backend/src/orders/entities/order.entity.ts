@@ -1,4 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { OrderStatus } from '../order-status';
 
 @Entity('order_items')
 export class OrderItem {
@@ -33,7 +34,7 @@ export class Order {
   items!: OrderItem[];
 
   @Column({ type: 'varchar', length: 50, default: 'received' })
-  status!: 'received' | 'preparing' | 'ready' | 'served';
+  status!: OrderStatus;
 
   @Column({ type: 'integer' })
   total!: number;

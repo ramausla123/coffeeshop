@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
-import type { MenuItem, Order } from '../types';
+import type { MenuItem, Order, OrderStatus } from '../types';
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -11,6 +11,15 @@ const currency = new Intl.NumberFormat('id-ID', {
 });
 
 const emptyForm = { name: '', price: 0, description: '' };
+type OrderFilter = 'all' | OrderStatus;
+
+const orderFilters: { value: OrderFilter; label: string }[] = [
+  { value: 'all', label: 'Semua' },
+  { value: 'received', label: 'Baru' },
+  { value: 'preparing', label: 'Diproses' },
+  { value: 'ready', label: 'Siap' },
+  { value: 'served', label: 'Selesai' },
+];
 
 export default function Admin() {
   const router = useRouter();
@@ -21,6 +30,7 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
 
   const stats = useMemo(() => {
     const byStatus = orders.reduce(
@@ -37,6 +47,11 @@ export default function Admin() {
       byStatus,
     };
   }, [orders]);
+
+  const filteredOrders = useMemo(
+    () => (orderFilter === 'all' ? orders : orders.filter((order) => order.status === orderFilter)),
+    [orderFilter, orders],
+  );
 
   useEffect(() => {
     validateAccess();
@@ -282,8 +297,22 @@ export default function Admin() {
 
         <div className="panel">
           <div className="sectionTitle">
-            <h2>Order Report</h2>
-            {loading && <span>Memuat...</span>}
+            <div>
+              <h2>Order Report</h2>
+              {loading && <span>Memuat...</span>}
+            </div>
+            <div className="filterGroup" aria-label="Filter status order">
+              {orderFilters.map((filter) => (
+                <button
+                  type="button"
+                  key={filter.value}
+                  className={orderFilter === filter.value ? 'active' : ''}
+                  onClick={() => setOrderFilter(filter.value)}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="tableWrap">
@@ -297,7 +326,7 @@ export default function Admin() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
+                {filteredOrders.map((order) => (
                   <tr key={order.id}>
                     <td>#{order.id}</td>
                     <td>{order.table || '-'}</td>
@@ -307,9 +336,9 @@ export default function Admin() {
                     <td>{currency.format(order.total)}</td>
                   </tr>
                 ))}
-                {!loading && orders.length === 0 && (
+                {!loading && filteredOrders.length === 0 && (
                   <tr>
-                    <td colSpan={4}>Belum ada order.</td>
+                    <td colSpan={4}>Tidak ada order untuk filter ini.</td>
                   </tr>
                 )}
               </tbody>
@@ -329,7 +358,8 @@ export default function Admin() {
         .topbar,
         .sectionTitle,
         .actions,
-        .rowActions {
+        .rowActions,
+        .filterGroup {
           display: flex;
           align-items: center;
           gap: 12px;
@@ -401,6 +431,12 @@ export default function Admin() {
           font-size: 14px;
         }
 
+        .filterGroup {
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+
         .stats strong {
           font-size: 24px;
         }
@@ -453,6 +489,12 @@ export default function Admin() {
 
         .danger {
           color: #8a1f1f;
+        }
+
+        .filterGroup button.active {
+          border-color: #8b5e34;
+          background: #8b5e34;
+          color: #fff;
         }
 
         .tableWrap {

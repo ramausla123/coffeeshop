@@ -4,6 +4,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { isOrderStatus } from './order-status';
 
 @Controller('orders')
 export class OrdersController {
@@ -32,9 +33,8 @@ export class OrdersController {
   @Roles('admin', 'kitchen')
   @Patch(':id/status')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
-    const valid = ['received', 'preparing', 'ready', 'served'];
-    if (!valid.includes(status)) throw new BadRequestException('Invalid status');
-    const order = await this.ordersService.updateStatus(Number(id), status as any);
+    if (!isOrderStatus(status)) throw new BadRequestException('Invalid status');
+    const order = await this.ordersService.updateStatus(Number(id), status);
     if (!order) throw new BadRequestException('Order not found');
     return order;
   }

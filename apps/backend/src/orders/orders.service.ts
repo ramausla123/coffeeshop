@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { MenuService } from '../menu/menu.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
+import { OrderStatus } from './order-status';
 
 @Injectable()
 export class OrdersService {
@@ -44,7 +45,7 @@ export class OrdersService {
     return Promise.all(orders.map((o) => this.enrichOrder(o)));
   }
 
-  async updateStatus(id: number, status: Order['status']) {
+  async updateStatus(id: number, status: OrderStatus) {
     const order = await this.orderRepository.findOne({ where: { id } });
     if (!order) return undefined;
     order.status = status;
