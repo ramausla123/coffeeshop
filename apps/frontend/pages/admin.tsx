@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { authHeaders, clearToken, getToken } from '../lib/auth';
+import { authHeaders, clearToken, getRoleFromToken, getToken } from '../lib/auth';
+import { apiUrl } from '../lib/api';
 
 interface MenuItem {
   id: number;
@@ -12,86 +13,142 @@ interface MenuItem {
 interface Order {
   id: number;
   table?: string;
-  status: string;
+  status: 'received' | 'preparing' | 'ready' | 'served';
   total: number;
 }
+
+const currency = new Intl.NumberFormat('id-ID', {
+  style: 'currency',
+  currency: 'IDR',
+  maximumFractionDigits: 0,
+});
+
+const emptyForm = { name: '', price: 0, description: '' };
 
 export default function Admin() {
   const router = useRouter();
   const [menu, setMenu] = useState<MenuItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [formData, setFormData] = useState({ name: '', price: 0, description: '' });
+  const [formData, setFormData] = useState(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const stats = useMemo(() => {
+    const byStatus = orders.reduce(
+      (acc, order) => {
+        acc[order.status] += 1;
+        return acc;
+      },
+      { received: 0, preparing: 0, ready: 0, served: 0 },
+    );
+
+    return {
+      totalSales: orders.reduce((sum, order) => sum + order.total, 0),
+      totalOrders: orders.length,
+      byStatus,
+    };
+  }, [orders]);
+
   useEffect(() => {
-    if (!getToken()) {
+    const token = getToken();
+    if (!token) {
       router.push('/login');
       return;
     }
-    fetchMenu();
-    fetchOrders();
+
+    const role = getRoleFromToken(token);
+    if (role === 'kitchen') {
+      router.push('/kds');
+      return;
+    }
+
+    fetchData();
   }, []);
 
-  async function fetchMenu() {
-    const res = await fetch('http://localhost:4000/menu', {
-      headers: { ...authHeaders() },
-    });
-    if (res.status === 401) {
-      return router.push('/login');
-    }
-    const data = await res.json();
-    setMenu(data);
-  }
+  async function fetchData() {
+    setLoading(true);
+    setError(null);
 
-  async function fetchOrders() {
-    const res = await fetch('http://localhost:4000/orders', {
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    });
-    if (res.status === 401) {
-      return router.push('/login');
+    try {
+      const [menuRes, ordersRes] = await Promise.all([
+        fetch(apiUrl('/menu'), { headers: authHeaders() }),
+        fetch(apiUrl('/orders'), { headers: { ...authHeaders(), 'Content-Type': 'application/json' } }),
+      ]);
+
+      if (menuRes.status === 401 || ordersRes.status === 401) {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      if (!menuRes.ok || !ordersRes.ok) throw new Error('Request failed');
+
+      setMenu(await menuRes.json());
+      setOrders(await ordersRes.json());
+    } catch {
+      setError('Gagal memuat dashboard. Pastikan backend berjalan dan akun Anda valid.');
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    setOrders(data);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!formData.name || formData.price <= 0) return;
+    if (!formData.name || formData.price <= 0 || saving) return;
 
-    const url = editId ? `http://localhost:4000/menu/${editId}` : 'http://localhost:4000/menu';
+    setSaving(true);
+    setError(null);
+
+    const url = editId ? apiUrl(`/menu/${editId}`) : apiUrl('/menu');
     const method = editId ? 'PATCH' : 'POST';
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(formData),
+      });
 
-    if (res.status === 401) {
-      return router.push('/login');
-    }
-    if (!res.ok) {
+      if (res.status === 401) {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) throw new Error('Save failed');
+
+      setEditId(null);
+      setFormData(emptyForm);
+      await fetchData();
+    } catch {
       setError('Gagal menyimpan item menu. Pastikan Anda login sebagai admin.');
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    setEditId(null);
-    setFormData({ name: '', price: 0, description: '' });
-    setError(null);
-    fetchMenu();
   }
 
   async function handleDelete(id: number) {
     if (!confirm('Hapus item menu?')) return;
-    const res = await fetch(`http://localhost:4000/menu/${id}`, {
-      method: 'DELETE',
-      headers: authHeaders(),
-    });
-    if (res.status === 401) {
-      return router.push('/login');
+
+    try {
+      const res = await fetch(apiUrl(`/menu/${id}`), {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+
+      if (res.status === 401) {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) throw new Error('Delete failed');
+      await fetchData();
+    } catch {
+      setError('Gagal menghapus item menu.');
     }
-    fetchMenu();
   }
 
   function handleEdit(item: MenuItem) {
@@ -99,129 +156,386 @@ export default function Admin() {
     setEditId(item.id);
   }
 
+  function cancelEdit() {
+    setEditId(null);
+    setFormData(emptyForm);
+  }
+
   function handleLogout() {
     clearToken();
     router.push('/login');
   }
 
-  const totalSales = orders.reduce((s, o) => s + o.total, 0);
-  const ordersByStatus = {
-    received: orders.filter((o) => o.status === 'received').length,
-    preparing: orders.filter((o) => o.status === 'preparing').length,
-    ready: orders.filter((o) => o.status === 'ready').length,
-    served: orders.filter((o) => o.status === 'served').length,
-  };
-
   return (
-    <main style={{ padding: 32, fontFamily: 'Inter, system-ui', maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <h1>Admin Dashboard</h1>
-        <button onClick={handleLogout}>Logout</button>
-      </div>
+    <main className="page">
+      <header className="topbar">
+        <div>
+          <p>Admin</p>
+          <h1>Dashboard</h1>
+        </div>
+        <div className="actions">
+          <button type="button" onClick={fetchData} disabled={loading}>
+            Refresh
+          </button>
+          <button type="button" onClick={handleLogout}>
+            Logout
+          </button>
+        </div>
+      </header>
 
-      {error && <div style={{ marginBottom: 16, color: 'red' }}>{error}</div>}
+      {error && <div className="alert">{error}</div>}
 
-      <section style={{ marginBottom: 40 }}>
-        <h2>Menu Management</h2>
-        <form onSubmit={handleSubmit} style={{ marginBottom: 20, padding: 16, background: '#f9f9f9', borderRadius: 8 }}>
-          <input
-            type="text"
-            placeholder="Nama"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            style={{ marginRight: 8, padding: 8 }}
-          />
-          <input
-            type="number"
-            placeholder="Harga"
-            value={formData.price}
-            onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-            style={{ marginRight: 8, padding: 8 }}
-          />
-          <input
-            type="text"
-            placeholder="Deskripsi"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            style={{ marginRight: 8, padding: 8 }}
-          />
-          <button type="submit">{editId ? 'Update' : 'Tambah'} Item</button>
-          {editId && (
-            <button type="button" onClick={() => { setEditId(null); setFormData({ name: '', price: 0, description: '' }); }}>
-              Batal
-            </button>
-          )}
-        </form>
-
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f0f0f0' }}>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Nama</th>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Harga</th>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Deskripsi</th>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {menu.map((item) => (
-              <tr key={item.id}>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>{item.name}</td>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>Rp {item.price}</td>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>{item.description}</td>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>
-                  <button onClick={() => handleEdit(item)} style={{ marginRight: 8 }}>
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(item.id)}>Hapus</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="stats">
+        <article>
+          <span>Total Penjualan</span>
+          <strong>{currency.format(stats.totalSales)}</strong>
+        </article>
+        <article>
+          <span>Total Order</span>
+          <strong>{stats.totalOrders}</strong>
+        </article>
+        <article>
+          <span>Baru</span>
+          <strong>{stats.byStatus.received}</strong>
+        </article>
+        <article>
+          <span>Proses</span>
+          <strong>{stats.byStatus.preparing}</strong>
+        </article>
       </section>
 
-      <section>
-        <h2>Order Report</h2>
-        <div style={{ display: 'flex', gap: 24, marginBottom: 20 }}>
-          <div style={{ padding: 16, background: '#e8f5e9', borderRadius: 8 }}>
-            <div>Total Penjualan</div>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>Rp {totalSales.toLocaleString('id-ID')}</div>
+      <section className="content">
+        <div className="panel">
+          <div className="sectionTitle">
+            <h2>Menu Management</h2>
+            {editId && <span>Editing #{editId}</span>}
           </div>
-          <div style={{ padding: 16, background: '#e3f2fd', borderRadius: 8 }}>
-            <div>Total Order</div>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{orders.length}</div>
-          </div>
-          <div style={{ padding: 16, background: '#fff3e0', borderRadius: 8 }}>
-            <div>Baru</div>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{ordersByStatus.received}</div>
-          </div>
-          <div style={{ padding: 16, background: '#fce4ec', borderRadius: 8 }}>
-            <div>Proses</div>
-            <div style={{ fontSize: 24, fontWeight: 'bold' }}>{ordersByStatus.preparing}</div>
+
+          <form className="menuForm" onSubmit={handleSubmit}>
+            <input
+              type="text"
+              placeholder="Nama menu"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="Harga"
+              value={formData.price || ''}
+              onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+            />
+            <input
+              type="text"
+              placeholder="Deskripsi"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            />
+            <button type="submit" disabled={saving || !formData.name || formData.price <= 0}>
+              {saving ? 'Menyimpan...' : editId ? 'Update' : 'Tambah'}
+            </button>
+            {editId && (
+              <button type="button" onClick={cancelEdit}>
+                Batal
+              </button>
+            )}
+          </form>
+
+          <div className="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nama</th>
+                  <th>Harga</th>
+                  <th>Deskripsi</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {menu.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.name}</td>
+                    <td>{currency.format(item.price)}</td>
+                    <td>{item.description || '-'}</td>
+                    <td>
+                      <div className="rowActions">
+                        <button type="button" onClick={() => handleEdit(item)}>
+                          Edit
+                        </button>
+                        <button type="button" className="danger" onClick={() => handleDelete(item.id)}>
+                          Hapus
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!loading && menu.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>Menu masih kosong.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
 
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f0f0f0' }}>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Order ID</th>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Meja</th>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Status</th>
-              <th style={{ padding: 12, textAlign: 'left', border: '1px solid #ddd' }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>#{order.id}</td>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>{order.table || '-'}</td>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>{order.status}</td>
-                <td style={{ padding: 12, border: '1px solid #ddd' }}>Rp {order.total.toLocaleString('id-ID')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="panel">
+          <div className="sectionTitle">
+            <h2>Order Report</h2>
+            {loading && <span>Memuat...</span>}
+          </div>
+
+          <div className="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Meja</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id}>
+                    <td>#{order.id}</td>
+                    <td>{order.table || '-'}</td>
+                    <td>
+                      <span className={`status ${order.status}`}>{order.status}</span>
+                    </td>
+                    <td>{currency.format(order.total)}</td>
+                  </tr>
+                ))}
+                {!loading && orders.length === 0 && (
+                  <tr>
+                    <td colSpan={4}>Belum ada order.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
+
+      <style jsx>{`
+        .page {
+          max-width: 1180px;
+          margin: 0 auto;
+          padding: 32px 20px 48px;
+          color: #1f2933;
+        }
+
+        .topbar,
+        .sectionTitle,
+        .actions,
+        .rowActions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .topbar,
+        .sectionTitle {
+          justify-content: space-between;
+        }
+
+        .topbar {
+          margin-bottom: 22px;
+        }
+
+        .topbar p {
+          margin: 0 0 4px;
+          color: #8b5e34;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        h1,
+        h2 {
+          margin: 0;
+        }
+
+        h1 {
+          font-size: 34px;
+          line-height: 1.1;
+        }
+
+        h2 {
+          font-size: 20px;
+        }
+
+        .alert {
+          border: 1px solid #f0b8b8;
+          border-radius: 8px;
+          background: #fff1f1;
+          color: #8a1f1f;
+          padding: 12px 14px;
+          margin-bottom: 16px;
+        }
+
+        .stats {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-bottom: 24px;
+        }
+
+        .stats article,
+        .panel {
+          border: 1px solid #d8dee4;
+          border-radius: 8px;
+          background: #fff;
+        }
+
+        .stats article {
+          display: grid;
+          gap: 8px;
+          padding: 16px;
+        }
+
+        .stats span,
+        .sectionTitle span {
+          color: #667085;
+          font-size: 14px;
+        }
+
+        .stats strong {
+          font-size: 24px;
+        }
+
+        .content {
+          display: grid;
+          gap: 24px;
+        }
+
+        .panel {
+          padding: 18px;
+        }
+
+        .menuForm {
+          display: grid;
+          grid-template-columns: minmax(160px, 1fr) 130px minmax(180px, 1.4fr) auto auto;
+          gap: 10px;
+          margin: 16px 0;
+        }
+
+        input {
+          min-height: 40px;
+          border: 1px solid #c9d1d9;
+          border-radius: 8px;
+          padding: 0 12px;
+          font: inherit;
+        }
+
+        button {
+          min-height: 38px;
+          border: 1px solid #b7c2cc;
+          border-radius: 8px;
+          background: #fff;
+          color: #1f2933;
+          padding: 0 12px;
+          font: inherit;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        button:hover:not(:disabled) {
+          border-color: #8b5e34;
+          color: #6f461f;
+        }
+
+        button:disabled {
+          cursor: not-allowed;
+          opacity: 0.55;
+        }
+
+        .danger {
+          color: #8a1f1f;
+        }
+
+        .tableWrap {
+          overflow-x: auto;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 680px;
+        }
+
+        th,
+        td {
+          border-bottom: 1px solid #e5e7eb;
+          padding: 12px;
+          text-align: left;
+          vertical-align: top;
+        }
+
+        th {
+          color: #667085;
+          font-size: 13px;
+          text-transform: uppercase;
+        }
+
+        .status {
+          display: inline-flex;
+          border-radius: 999px;
+          padding: 4px 10px;
+          background: #eef2f7;
+          color: #344054;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .status.received {
+          background: #fff7e8;
+          color: #8b5e00;
+        }
+
+        .status.preparing {
+          background: #e8f1ff;
+          color: #174ea6;
+        }
+
+        .status.ready {
+          background: #eefaf2;
+          color: #14532d;
+        }
+
+        .status.served {
+          background: #f1f5f9;
+          color: #475569;
+        }
+
+        @media (max-width: 920px) {
+          .stats {
+            grid-template-columns: repeat(2, 1fr);
+          }
+
+          .menuForm {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 560px) {
+          .topbar {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .actions {
+            justify-content: stretch;
+          }
+
+          .actions button {
+            flex: 1;
+          }
+
+          .stats {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
     </main>
   );
 }

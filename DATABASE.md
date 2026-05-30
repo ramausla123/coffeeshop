@@ -1,39 +1,27 @@
 # Database Setup
 
-## PostgreSQL Installation & Setup
+## SQLite Setup
 
-### Mac/Linux (Homebrew)
-```bash
-brew install postgresql@15
-brew services start postgresql@15
-createdb coffee_app
+The backend currently uses SQLite through TypeORM:
+
+```ts
+type: 'sqlite'
+database: process.env.DB_PATH || './coffee.db'
 ```
 
-### Windows
-1. Download PostgreSQL from https://www.postgresql.org/download/windows/
-2. Install and note credentials
-3. Run pgAdmin or psql to create database:
-```bash
-psql -U postgres
-CREATE DATABASE coffee_app;
-```
-
-### Docker (Recommended for dev)
-```bash
-docker run --name coffee-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=coffee_app -d -p 5432:5432 postgres:15-alpine
-```
+This means local development does not require PostgreSQL, Docker, pgAdmin, or a running database service.
 
 ## Environment Setup
 
-Create `.env` in backend root:
-```
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=coffee_app
+Create `.env` in `apps/backend`:
+
+```env
+DB_TYPE=sqlite
+DB_PATH=./coffee.db
 NODE_ENV=development
 ```
+
+`DB_PATH` is relative to the backend working directory when you run the server.
 
 ## Install Dependencies & Run
 
@@ -43,13 +31,37 @@ npm install
 npm run start:dev
 ```
 
-TypeORM will auto-sync schema on startup (synchronize: true in development).
+TypeORM will auto-sync schema on startup (`synchronize: true`) while `NODE_ENV` is not `production`.
 
 ## Initial Data
 
-API will auto-sync, but you can seed via POST:
+The API will auto-sync the schema, and the backend creates starter menu items automatically when the menu table is empty.
+Protected menu writes require an admin token.
+Default users are seeded automatically on backend startup:
+
+```text
+admin / admin123
+kitchen / kitchen123
+```
+
+Login and use the returned token:
+
+```bash
+curl -X POST http://localhost:4000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+```
+
+Then seed a menu item:
+
 ```bash
 curl -X POST http://localhost:4000/menu \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
   -d '{"name":"Espresso","price":20000,"description":"Single shot"}'
 ```
+
+## PostgreSQL Note
+
+Older project notes mention PostgreSQL, but the current backend code is configured for SQLite only.
+If you want PostgreSQL later, update `apps/backend/src/database/database.module.ts` to use `type: 'postgres'` and read the related `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` variables.
