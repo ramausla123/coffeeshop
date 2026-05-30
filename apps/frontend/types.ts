@@ -28,4 +28,6 @@ export type Order = {
   items: OrderItem[];
   status: OrderStatus;
   total: number;
+  createdAt?: string;
+  updatedAt?: string;
 };

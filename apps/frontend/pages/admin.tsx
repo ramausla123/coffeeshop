@@ -12,6 +12,7 @@ const currency = new Intl.NumberFormat('id-ID', {
 
 const emptyForm = { name: '', price: 0, description: '' };
 type OrderFilter = 'all' | OrderStatus;
+type DateFilter = 'today' | 'all';
 
 const orderFilters: { value: OrderFilter; label: string }[] = [
   { value: 'all', label: 'Semua' },
@@ -20,6 +21,16 @@ const orderFilters: { value: OrderFilter; label: string }[] = [
   { value: 'ready', label: 'Siap' },
   { value: 'served', label: 'Selesai' },
 ];
+
+const dateFilters: { value: DateFilter; label: string }[] = [
+  { value: 'today', label: 'Hari ini' },
+  { value: 'all', label: 'Semua tanggal' },
+];
+
+const dateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+});
 
 export default function Admin() {
   const router = useRouter();
@@ -31,6 +42,7 @@ export default function Admin() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
+  const [dateFilter, setDateFilter] = useState<DateFilter>('today');
 
   const stats = useMemo(() => {
     const byStatus = orders.reduce(
@@ -48,10 +60,13 @@ export default function Admin() {
     };
   }, [orders]);
 
-  const filteredOrders = useMemo(
-    () => (orderFilter === 'all' ? orders : orders.filter((order) => order.status === orderFilter)),
-    [orderFilter, orders],
-  );
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesStatus = orderFilter === 'all' || order.status === orderFilter;
+      const matchesDate = dateFilter === 'all' || isToday(order.createdAt);
+      return matchesStatus && matchesDate;
+    });
+  }, [dateFilter, orderFilter, orders]);
 
   useEffect(() => {
     validateAccess();
@@ -301,17 +316,31 @@ export default function Admin() {
               <h2>Order Report</h2>
               {loading && <span>Memuat...</span>}
             </div>
-            <div className="filterGroup" aria-label="Filter status order">
-              {orderFilters.map((filter) => (
-                <button
-                  type="button"
-                  key={filter.value}
-                  className={orderFilter === filter.value ? 'active' : ''}
-                  onClick={() => setOrderFilter(filter.value)}
-                >
-                  {filter.label}
-                </button>
-              ))}
+            <div className="filters">
+              <div className="filterGroup" aria-label="Filter tanggal order">
+                {dateFilters.map((filter) => (
+                  <button
+                    type="button"
+                    key={filter.value}
+                    className={dateFilter === filter.value ? 'active' : ''}
+                    onClick={() => setDateFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              <div className="filterGroup" aria-label="Filter status order">
+                {orderFilters.map((filter) => (
+                  <button
+                    type="button"
+                    key={filter.value}
+                    className={orderFilter === filter.value ? 'active' : ''}
+                    onClick={() => setOrderFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -320,6 +349,7 @@ export default function Admin() {
               <thead>
                 <tr>
                   <th>Order</th>
+                  <th>Waktu</th>
                   <th>Meja</th>
                   <th>Item</th>
                   <th>Status</th>
@@ -330,6 +360,7 @@ export default function Admin() {
                 {filteredOrders.map((order) => (
                   <tr key={order.id}>
                     <td>#{order.id}</td>
+                    <td>{formatOrderDate(order.createdAt)}</td>
                     <td>{order.table || '-'}</td>
                     <td>
                       <div className="orderItems">
@@ -348,7 +379,7 @@ export default function Admin() {
                 ))}
                 {!loading && filteredOrders.length === 0 && (
                   <tr>
-                    <td colSpan={5}>Tidak ada order untuk filter ini.</td>
+                    <td colSpan={6}>Tidak ada order untuk filter ini.</td>
                   </tr>
                 )}
               </tbody>
@@ -444,6 +475,12 @@ export default function Admin() {
         .filterGroup {
           flex-wrap: wrap;
           justify-content: flex-end;
+          gap: 8px;
+        }
+
+        .filters {
+          display: grid;
+          justify-items: end;
           gap: 8px;
         }
 
@@ -577,6 +614,17 @@ export default function Admin() {
           .menuForm {
             grid-template-columns: 1fr;
           }
+
+          .sectionTitle {
+            align-items: flex-start;
+            flex-direction: column;
+          }
+
+          .filters,
+          .filterGroup {
+            justify-items: start;
+            justify-content: flex-start;
+          }
         }
 
         @media (max-width: 560px) {
@@ -600,4 +648,22 @@ export default function Admin() {
       `}</style>
     </main>
   );
+}
+
+function isToday(value?: string) {
+  if (!value) return false;
+
+  const date = new Date(value);
+  const today = new Date();
+
+  return (
+    date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate()
+  );
+}
+
+function formatOrderDate(value?: string) {
+  if (!value) return '-';
+  return dateTimeFormatter.format(new Date(value));
 }

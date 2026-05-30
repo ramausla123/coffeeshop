@@ -22,6 +22,11 @@ const currency = new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 });
 
+const timeFormatter = new Intl.DateTimeFormat('id-ID', {
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 function playNotificationSound() {
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
   const now = audioContext.currentTime;
@@ -204,7 +209,9 @@ export default function KDS() {
                     <div className="orderHead">
                       <div>
                         <strong>#{order.id}</strong>
-                        <span>Meja {order.table || '-'}</span>
+                        <span>
+                          Meja {order.table || '-'} {order.createdAt ? `- ${timeFormatter.format(new Date(order.createdAt))}` : ''}
+                        </span>
                       </div>
                       <span className={`status ${order.status}`}>{statusLabel[order.status]}</span>
                     </div>
