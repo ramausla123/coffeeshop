@@ -4,6 +4,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
+import { connectWebSocket, getSocket, subscribeToOrders, unsubscribeFromOrders } from '../lib/websocket';
 import type { Order } from '../types';
 
 const statusFlow = ['received', 'preparing', 'ready', 'served'] as const;
@@ -110,7 +111,6 @@ export default function KDS() {
   }
 
   useEffect(() => {
-    let intv: ReturnType<typeof setInterval> | undefined;
     let mounted = true;
 
     async function startKds() {
@@ -124,8 +124,40 @@ export default function KDS() {
           return;
         }
 
+        // Initial fetch
         await fetchOrders();
-        intv = setInterval(fetchOrders, 3000);
+
+        // Connect WebSocket
+        connectWebSocket();
+        const socket = getSocket();
+
+        if (socket) {
+          subscribeToOrders((event: string, data: any) => {
+            if (!mounted) return;
+
+            if (event === 'order:new') {
+              setError(null)
+              if (!knownOrderIds.current.has(data.id)) {
+                knownOrderIds.current.add(data.id);
+                playNotificationSound();
+                const itemsDesc = data.items.map((item: any) => `${item.name || 'Item'} x${item.quantity}`).join(', ');
+                toast.info(`Order baru #${data.id} - Meja ${data.table || '-'}: ${itemsDesc}`, {
+                  position: 'top-right',
+                  autoClose: 5000,
+                });
+                setOrders((prev) => [data, ...prev]);
+              }
+            } else if (event === 'order:updated') {
+              setError(null)
+              setOrders((prev) =>
+                prev.map((o) => (o.id === data.id ? data : o))
+              );
+            } else if (event === 'orders:refresh') {
+              setError(null)
+              setOrders(data);
+            }
+          });
+        }
       } catch {
         clearToken();
         router.push('/login');
@@ -136,7 +168,7 @@ export default function KDS() {
 
     return () => {
       mounted = false;
-      if (intv) clearInterval(intv);
+      unsubscribeFromOrders();
     };
   }, []);
 

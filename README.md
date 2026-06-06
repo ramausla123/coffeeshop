@@ -23,6 +23,7 @@ Optional frontend env:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_WS_URL=http://localhost:4002
 ```
 
 ### 2. Install Dependencies
@@ -49,12 +50,16 @@ cd apps/backend
 npm run start:dev
 ```
 
+The backend also starts a Socket.io server for real-time order updates. By default it listens on port `4002`.
+
 ## Features
 
 - Customer Ordering - PWA from table QR (http://localhost:3000)
 - Kitchen Display System - order status screen (http://localhost:3000/kds)
 - Admin Dashboard - menu CRUD + reports (http://localhost:3000/admin)
+- Cashier Dashboard - process payments and print receipts (http://localhost:3000/cashier)
 - Notifications - toast + sound alerts on new orders
+- Real-time updates - Socket.io broadcasts order, status, and payment changes
 - SQLite - local development database via `coffee.db`
 - Default menu seed - starter coffee menu is created when the menu table is empty
 
@@ -62,12 +67,14 @@ npm run start:dev
 
 - `GET /menu`, `POST /menu`, `PATCH /menu/:id`, `DELETE /menu/:id`
 - `POST /orders`, `GET /orders`, `GET /orders/:id`, `PATCH /orders/:id/status`
+- `PATCH /orders/:id/payment`
 - `POST /auth/login`, `GET /auth/profile`
 
 ## Architecture
 
 - Frontend: Next.js 14 + React 18 + TypeScript
 - Backend: NestJS 10 + TypeORM + SQLite
+- Realtime: Socket.io
 - Database: auto-sync in development
 
 See [DATABASE.md](DATABASE.md) for database notes and seeding.

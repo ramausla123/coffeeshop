@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
+import { connectWebSocket, getSocket, subscribeToOrders, unsubscribeFromOrders } from '../lib/websocket';
 import type { MenuItem, Order, OrderStatus } from '../types';
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -69,35 +70,68 @@ export default function Admin() {
   }, [dateFilter, orderFilter, orders]);
 
   useEffect(() => {
-    validateAccess();
-  }, []);
+    let mounted = true;
 
-  async function validateAccess() {
-    const token = getToken();
-    if (!token) {
-      router.push('/login');
-      return;
-    }
+    async function initAdmin() {
+      try {
+        const token = getToken();
+        if (!token) {
+          router.push('/login');
+          return;
+        }
 
-    try {
-      const profile = await fetchProfile();
-      if (profile.role === 'kitchen') {
-        router.push('/kds');
-        return;
-      }
+        const profile = await fetchProfile();
+        if (!mounted) return;
 
-      if (profile.role !== 'admin') {
+        if (profile.role === 'kitchen') {
+          router.push('/kds');
+          return;
+        }
+
+        if (profile.role !== 'admin') {
+          clearToken();
+          router.push('/login');
+          return;
+        }
+
+        await fetchData();
+
+        // Connect WebSocket
+        connectWebSocket();
+        const socket = getSocket();
+
+        if (socket) {
+          subscribeToOrders((event: string, data: any) => {
+            if (!mounted) return;
+
+            if (event === 'order:new') {
+              setOrders((prev) => [data, ...prev]);
+            } else if (event === 'order:updated') {
+              setOrders((prev) =>
+                prev.map((o) => (o.id === data.id ? data : o))
+              );
+            } else if (event === 'order:paid') {
+              setOrders((prev) =>
+                prev.map((o) => (o.id === data.id ? data : o))
+              );
+            } else if (event === 'orders:refresh') {
+              setOrders(data);
+            }
+          });
+        }
+      } catch {
         clearToken();
         router.push('/login');
-        return;
       }
-
-      fetchData();
-    } catch {
-      clearToken();
-      router.push('/login');
     }
-  }
+
+    initAdmin();
+
+    return () => {
+      mounted = false;
+      unsubscribeFromOrders();
+    };
+  }, []);
 
   async function fetchData() {
     setLoading(true);

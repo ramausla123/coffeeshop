@@ -31,7 +31,13 @@ export default function LoginPage() {
       setToken(data.access_token);
 
       const role = getRoleFromToken(data.access_token);
-      router.push(role === 'kitchen' ? '/kds' : '/admin');
+      if (role === 'kitchen') {
+        router.push('/kds');
+      } else if (role === 'cashier') {
+        router.push('/cashier');
+      } else {
+        router.push('/admin');
+      }
     } catch {
       setError('Tidak bisa terhubung ke backend. Pastikan server berjalan.');
     } finally {
@@ -45,7 +51,7 @@ export default function LoginPage() {
         <div className="intro">
           <p>Staff Area</p>
           <h1>Masuk ke Dashboard</h1>
-          <span>Gunakan akun admin atau kitchen untuk mengelola operasional coffee shop.</span>
+          <span>Gunakan akun admin, kitchen, atau cashier untuk mengelola operasional coffee shop.</span>
         </div>
 
         <form onSubmit={handleSubmit} className="form">
@@ -85,6 +91,10 @@ export default function LoginPage() {
           <div>
             <span>Kitchen</span>
             <strong>kitchen / kitchen123</strong>
+          </div>
+          <div>
+            <span>Cashier</span>
+            <strong>cashier / cashier123</strong>
           </div>
         </div>
       </section>
@@ -186,7 +196,7 @@ export default function LoginPage() {
 
         .credentials {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(3, 1fr);
           gap: 12px;
           margin-top: 20px;
         }

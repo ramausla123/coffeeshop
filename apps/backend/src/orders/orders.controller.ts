@@ -23,7 +23,7 @@ export class OrdersController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'kitchen')
+  @Roles('admin', 'kitchen', 'cashier')
   @Get()
   async list() {
     return this.ordersService.list();
@@ -35,6 +35,16 @@ export class OrdersController {
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     if (!isOrderStatus(status)) throw new BadRequestException('Invalid status');
     const order = await this.ordersService.updateStatus(Number(id), status);
+    if (!order) throw new BadRequestException('Order not found');
+    return order;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cashier')
+  @Patch(':id/payment')
+  async updatePayment(@Param('id') id: string, @Body('paidAmount') paidAmount: number) {
+    if (!paidAmount || paidAmount <= 0) throw new BadRequestException('Invalid paid amount');
+    const order = await this.ordersService.updatePayment(Number(id), paidAmount);
     if (!order) throw new BadRequestException('Order not found');
     return order;
   }

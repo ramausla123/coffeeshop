@@ -2,6 +2,8 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MenuService } from '../menu/menu.service';
+import { PrinterService } from '../printer/printer.service';
+import { OrdersGateway } from './orders.gateway';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Order } from './entities/order.entity';
 import { OrderStatus } from './order-status';
@@ -12,6 +14,8 @@ export class OrdersService {
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     private readonly menuService: MenuService,
+    private readonly printerService: PrinterService,
+    private readonly ordersGateway: OrdersGateway,
   ) {}
 
   async create(order: CreateOrderDto) {
@@ -32,7 +36,12 @@ export class OrdersService {
       total,
     });
     const saved = await this.orderRepository.save(newOrder);
-    return this.enrichOrder(saved);
+    const enriched = await this.enrichOrder(saved);
+
+    // Broadcast new order to connected clients
+    this.ordersGateway.broadcastNewOrder(enriched);
+
+    return enriched;
   }
 
   async findById(id: number) {
@@ -50,7 +59,36 @@ export class OrdersService {
     if (!order) return undefined;
     order.status = status;
     const updated = await this.orderRepository.save(order);
-    return this.enrichOrder(updated);
+    const enriched = await this.enrichOrder(updated);
+
+    // Broadcast status update to connected clients
+    this.ordersGateway.broadcastOrderUpdate(enriched);
+
+    return enriched;
+  }
+
+  async updatePayment(id: number, paidAmount: number) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) return undefined;
+    if (paidAmount < order.total) {
+      throw new BadRequestException(`Paid amount (${paidAmount}) must be >= order total (${order.total})`);
+    }
+    order.paymentStatus = 'paid';
+    order.paidAmount = paidAmount;
+    order.paidAt = new Date();
+    const updated = await this.orderRepository.save(order);
+    const enriched = await this.enrichOrder(updated);
+
+    // Broadcast payment update to connected clients
+    this.ordersGateway.broadcastPaymentUpdate(enriched);
+
+    // Trigger receipt printing
+    const change = paidAmount - order.total;
+    this.printerService.printReceipt(enriched, paidAmount, change).catch((err) => {
+      console.error(`Failed to print receipt for order ${id}:`, err);
+    });
+
+    return enriched;
   }
 
   private async enrichOrder(order: Order) {

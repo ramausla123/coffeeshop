@@ -39,6 +39,15 @@ export class Order {
   @Column({ type: 'integer' })
   total!: number;
 
+  @Column({ type: 'varchar', length: 20, default: 'pending' })
+  paymentStatus!: 'pending' | 'paid';
+
+  @Column({ type: 'integer', nullable: true })
+  paidAmount?: number;
+
+  @Column({ type: 'datetime', nullable: true })
+  paidAt?: Date;
+
   @CreateDateColumn()
   createdAt!: Date;
 

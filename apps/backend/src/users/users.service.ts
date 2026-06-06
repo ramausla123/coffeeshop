@@ -47,5 +47,11 @@ export class UsersService implements OnModuleInit {
       await this.create('kitchen', 'kitchen123', 'kitchen');
       this.logger.log('Created default kitchen user: kitchen / kitchen123');
     }
+
+    const hasCashier = await this.userRepository.exist({ where: { username: 'cashier' } });
+    if (!hasCashier) {
+      await this.create('cashier', 'cashier123', 'cashier');
+      this.logger.log('Created default cashier user: cashier / cashier123');
+    }
   }
 }

@@ -28,6 +28,9 @@ export type Order = {
   items: OrderItem[];
   status: OrderStatus;
   total: number;
+  paymentStatus?: 'pending' | 'paid';
+  paidAmount?: number;
+  paidAt?: string;
   createdAt?: string;
   updatedAt?: string;
 };
