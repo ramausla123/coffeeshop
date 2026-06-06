@@ -264,7 +264,10 @@ export default function Cashier() {
                 <tbody>
                   {selectedOrder.items.map((item, idx) => (
                     <tr key={idx}>
-                      <td>{item.name}</td>
+                      <td>
+                        <span>{item.name}</span>
+                        {item.note && <em>{item.note}</em>}
+                      </td>
                       <td>x{item.quantity}</td>
                     </tr>
                   ))}
@@ -562,6 +565,17 @@ export default function Cashier() {
         .orderItems td {
           padding: 6px 0;
           border-bottom: 1px solid #e0e0e0;
+        }
+
+        .orderItems td:first-child {
+          display: grid;
+          gap: 2px;
+        }
+
+        .orderItems em {
+          color: #777;
+          font-size: 12px;
+          font-style: normal;
         }
 
         .orderItems td:last-child {

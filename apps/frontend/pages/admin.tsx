@@ -281,7 +281,7 @@ export default function Admin() {
 
       <section className="stats">
         <article>
-          <span>Total Penjualan</span>
+          <span>Penjualan Lunas</span>
           <strong>{currency.format(stats.totalSales)}</strong>
         </article>
         <article>
@@ -444,9 +444,10 @@ export default function Admin() {
                     <td>
                       <div className="orderItems">
                         {order.items?.map((item, index) => (
-                          <span key={`${order.id}-${item.menuId}-${index}`}>
-                            {item.name || 'Item'} x{item.quantity}
-                          </span>
+                          <div key={`${order.id}-${item.menuId}-${index}`}>
+                            <span>{item.name || 'Item'} x{item.quantity}</span>
+                            {item.note && <em>{item.note}</em>}
+                          </div>
                         ))}
                       </div>
                     </td>
@@ -640,6 +641,17 @@ export default function Admin() {
           min-width: 180px;
           color: #344054;
           font-size: 14px;
+        }
+
+        .orderItems div {
+          display: grid;
+          gap: 2px;
+        }
+
+        .orderItems em {
+          color: #667085;
+          font-size: 12px;
+          font-style: normal;
         }
 
         .filterGroup button.active {
