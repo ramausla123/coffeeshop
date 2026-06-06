@@ -22,7 +22,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart])
-  const availableMenu = useMemo(() => menu.filter((item) => item.isAvailable !== false), [menu])
 
   useEffect(() => {
     fetchMenu()
@@ -53,6 +52,8 @@ export default function Home() {
   }
 
   function addToCart(item: MenuItem) {
+    if (item.isAvailable === false) return
+
     setOrderResult(null)
     setCart((current) => {
       const existing = current.find((cartItem) => cartItem.menuId === item.id)
@@ -182,28 +183,35 @@ export default function Home() {
 
           {loadingMenu && <p className="muted">Memuat menu...</p>}
 
-          {!loadingMenu && availableMenu.length === 0 && (
+          {!loadingMenu && menu.length === 0 && (
             <div className="empty">
-              <strong>Menu belum tersedia</strong>
-              <span>Silakan cek kembali beberapa saat lagi.</span>
+              <strong>Menu masih kosong</strong>
+              <span>Tambahkan menu dari dashboard admin.</span>
             </div>
           )}
 
           <div className="menuGrid">
-            {availableMenu.map((item) => (
-              <article className="menuItem" key={item.id}>
+            {menu.map((item) => {
+              const soldOut = item.isAvailable === false
+
+              return (
+              <article className={`menuItem ${soldOut ? 'soldOut' : ''}`} key={item.id}>
                 <div>
-                  <h3>{item.name}</h3>
+                  <div className="menuTitle">
+                    <h3>{item.name}</h3>
+                    {soldOut && <span>Habis</span>}
+                  </div>
                   {item.description && <p>{item.description}</p>}
                 </div>
                 <div className="menuFooter">
                   <strong>{currency.format(item.price)}</strong>
-                  <button type="button" onClick={() => addToCart(item)}>
-                    Tambah
+                  <button type="button" onClick={() => addToCart(item)} disabled={soldOut}>
+                    {soldOut ? 'Kosong' : 'Tambah'}
                   </button>
                 </div>
               </article>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -434,6 +442,28 @@ export default function Home() {
           border: 1px solid #e5e7eb;
           border-radius: 8px;
           padding: 16px;
+        }
+
+        .menuItem.soldOut {
+          background: #f8fafc;
+          opacity: 0.72;
+        }
+
+        .menuTitle {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .menuTitle span {
+          border-radius: 999px;
+          background: #fff1f1;
+          color: #8a1f1f;
+          padding: 4px 9px;
+          font-size: 12px;
+          font-weight: 800;
+          white-space: nowrap;
         }
 
         .menuItem h3 {

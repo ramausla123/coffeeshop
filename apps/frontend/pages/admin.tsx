@@ -63,7 +63,9 @@ export default function Admin() {
     );
 
     return {
-      totalSales: filteredOrders.reduce((sum, order) => sum + order.total, 0),
+      totalSales: filteredOrders
+        .filter((order) => order.paymentStatus === 'paid')
+        .reduce((sum, order) => sum + order.total, 0),
       totalOrders: filteredOrders.length,
       byStatus,
     };
