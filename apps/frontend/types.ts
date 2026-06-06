@@ -11,6 +11,7 @@ export type MenuItem = {
   name: string;
   price: number;
   description?: string;
+  isAvailable?: boolean;
 };
 
 export type OrderStatus = 'received' | 'preparing' | 'ready' | 'served';

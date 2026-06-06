@@ -22,6 +22,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart])
+  const availableMenu = useMemo(() => menu.filter((item) => item.isAvailable !== false), [menu])
 
   useEffect(() => {
     fetchMenu()
@@ -181,15 +182,15 @@ export default function Home() {
 
           {loadingMenu && <p className="muted">Memuat menu...</p>}
 
-          {!loadingMenu && menu.length === 0 && (
+          {!loadingMenu && availableMenu.length === 0 && (
             <div className="empty">
-              <strong>Menu masih kosong</strong>
-              <span>Tambahkan menu dari dashboard admin.</span>
+              <strong>Menu belum tersedia</strong>
+              <span>Silakan cek kembali beberapa saat lagi.</span>
             </div>
           )}
 
           <div className="menuGrid">
-            {menu.map((item) => (
+            {availableMenu.map((item) => (
               <article className="menuItem" key={item.id}>
                 <div>
                   <h3>{item.name}</h3>

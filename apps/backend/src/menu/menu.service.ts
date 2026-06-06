@@ -8,6 +8,7 @@ export type MenuItemType = {
   name: string;
   price: number;
   description?: string;
+  isAvailable: boolean;
 };
 
 @Injectable()
@@ -31,7 +32,7 @@ export class MenuService implements OnModuleInit {
     return this.menuRepository.findOne({ where: { id } });
   }
 
-  async create(data: Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<MenuItem> {
+  async create(data: Pick<MenuItem, 'name' | 'price'> & Partial<Omit<MenuItem, 'id' | 'createdAt' | 'updatedAt'>>): Promise<MenuItem> {
     const item = this.menuRepository.create(data);
     return this.menuRepository.save(item);
   }
@@ -55,21 +56,25 @@ export class MenuService implements OnModuleInit {
         name: 'Espresso',
         price: 20000,
         description: 'Single shot coffee',
+        isAvailable: true,
       },
       {
         name: 'Americano',
         price: 24000,
         description: 'Espresso with hot water',
+        isAvailable: true,
       },
       {
         name: 'Cappuccino',
         price: 28000,
         description: 'Espresso, steamed milk, and foam',
+        isAvailable: true,
       },
       {
         name: 'Cafe Latte',
         price: 30000,
         description: 'Espresso with steamed milk',
+        isAvailable: true,
       },
     ]);
 

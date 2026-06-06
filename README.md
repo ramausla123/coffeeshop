@@ -58,6 +58,7 @@ The backend also starts a Socket.io server for real-time order updates. By defau
 - Kitchen Display System - order status screen (http://localhost:3000/kds)
 - Admin Dashboard - menu CRUD + reports (http://localhost:3000/admin)
 - Cashier Dashboard - process payments and print receipts (http://localhost:3000/cashier)
+- Menu availability - mark menu items as available or sold out
 - Notifications - toast + sound alerts on new orders
 - Real-time updates - Socket.io broadcasts order, status, and payment changes
 - SQLite - local development database via `coffee.db`

@@ -37,7 +37,7 @@ export default function Cashier() {
   }, [selectedOrder, paidAmount]);
 
   const unpaidOrders = useMemo(() => {
-    return orders.filter((o) => o.paymentStatus === 'pending' || o.paymentStatus !== 'paid');
+    return orders.filter((o) => o.paymentStatus !== 'paid');
   }, [orders]);
 
   useEffect(() => {
@@ -140,7 +140,10 @@ export default function Cashier() {
         return;
       }
 
-      if (!res.ok) throw new Error('Payment failed');
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Payment failed');
+      }
 
       const result = await res.json();
       setPaymentResult({
@@ -150,8 +153,8 @@ export default function Cashier() {
       setPaidAmount(0);
       setSelectedOrderId(null);
       await fetchOrders();
-    } catch {
-      setError('Gagal memproses pembayaran. Coba ulang.');
+    } catch (err: any) {
+      setError(err?.message || 'Gagal memproses pembayaran. Coba ulang.');
     } finally {
       setSaving(false);
     }

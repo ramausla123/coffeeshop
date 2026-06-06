@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 export class CreateMenuItemDto {
   @IsString()
@@ -12,4 +12,8 @@ export class CreateMenuItemDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isAvailable?: boolean;
 }

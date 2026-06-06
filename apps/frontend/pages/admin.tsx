@@ -11,7 +11,7 @@ const currency = new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 });
 
-const emptyForm = { name: '', price: 0, description: '' };
+const emptyForm = { name: '', price: 0, description: '', isAvailable: true };
 type OrderFilter = 'all' | OrderStatus;
 type DateFilter = 'today' | 'all';
 
@@ -45,8 +45,16 @@ export default function Admin() {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('today');
 
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesStatus = orderFilter === 'all' || order.status === orderFilter;
+      const matchesDate = dateFilter === 'all' || isToday(order.createdAt);
+      return matchesStatus && matchesDate;
+    });
+  }, [dateFilter, orderFilter, orders]);
+
   const stats = useMemo(() => {
-    const byStatus = orders.reduce(
+    const byStatus = filteredOrders.reduce(
       (acc, order) => {
         acc[order.status] += 1;
         return acc;
@@ -55,19 +63,11 @@ export default function Admin() {
     );
 
     return {
-      totalSales: orders.reduce((sum, order) => sum + order.total, 0),
-      totalOrders: orders.length,
+      totalSales: filteredOrders.reduce((sum, order) => sum + order.total, 0),
+      totalOrders: filteredOrders.length,
       byStatus,
     };
-  }, [orders]);
-
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const matchesStatus = orderFilter === 'all' || order.status === orderFilter;
-      const matchesDate = dateFilter === 'all' || isToday(order.createdAt);
-      return matchesStatus && matchesDate;
-    });
-  }, [dateFilter, orderFilter, orders]);
+  }, [filteredOrders]);
 
   useEffect(() => {
     let mounted = true;
@@ -218,7 +218,12 @@ export default function Admin() {
   }
 
   function handleEdit(item: MenuItem) {
-    setFormData({ name: item.name, price: item.price, description: item.description || '' });
+    setFormData({
+      name: item.name,
+      price: item.price,
+      description: item.description || '',
+      isAvailable: item.isAvailable !== false,
+    });
     setEditId(item.id);
   }
 
@@ -230,6 +235,27 @@ export default function Admin() {
   function handleLogout() {
     clearToken();
     router.push('/login');
+  }
+
+  async function toggleAvailability(item: MenuItem) {
+    try {
+      const res = await fetch(apiUrl(`/menu/${item.id}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ isAvailable: item.isAvailable === false }),
+      });
+
+      if (res.status === 401) {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) throw new Error('Toggle failed');
+      await fetchData();
+    } catch {
+      setError('Gagal mengubah status ketersediaan menu.');
+    }
   }
 
   return (
@@ -296,6 +322,14 @@ export default function Admin() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
+            <label className="availabilityControl">
+              <input
+                type="checkbox"
+                checked={formData.isAvailable}
+                onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
+              />
+              Tersedia
+            </label>
             <button type="submit" disabled={saving || !formData.name || formData.price <= 0}>
               {saving ? 'Menyimpan...' : editId ? 'Update' : 'Tambah'}
             </button>
@@ -313,6 +347,7 @@ export default function Admin() {
                   <th>Nama</th>
                   <th>Harga</th>
                   <th>Deskripsi</th>
+                  <th>Status</th>
                   <th>Aksi</th>
                 </tr>
               </thead>
@@ -323,9 +358,17 @@ export default function Admin() {
                     <td>{currency.format(item.price)}</td>
                     <td>{item.description || '-'}</td>
                     <td>
+                      <span className={`menuStatus ${item.isAvailable === false ? 'soldOut' : 'available'}`}>
+                        {item.isAvailable === false ? 'Habis' : 'Tersedia'}
+                      </span>
+                    </td>
+                    <td>
                       <div className="rowActions">
                         <button type="button" onClick={() => handleEdit(item)}>
                           Edit
+                        </button>
+                        <button type="button" onClick={() => toggleAvailability(item)}>
+                          {item.isAvailable === false ? 'Tersedia' : 'Habis'}
                         </button>
                         <button type="button" className="danger" onClick={() => handleDelete(item.id)}>
                           Hapus
@@ -336,7 +379,7 @@ export default function Admin() {
                 ))}
                 {!loading && menu.length === 0 && (
                   <tr>
-                    <td colSpan={4}>Menu masih kosong.</td>
+                    <td colSpan={5}>Menu masih kosong.</td>
                   </tr>
                 )}
               </tbody>
@@ -533,9 +576,26 @@ export default function Admin() {
 
         .menuForm {
           display: grid;
-          grid-template-columns: minmax(160px, 1fr) 130px minmax(180px, 1.4fr) auto auto;
+          grid-template-columns: minmax(160px, 1fr) 130px minmax(180px, 1.4fr) auto auto auto;
           gap: 10px;
           margin: 16px 0;
+        }
+
+        .availabilityControl {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-height: 40px;
+          font-size: 14px;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .availabilityControl input {
+          min-height: auto;
+          width: 16px;
+          height: 16px;
+          padding: 0;
         }
 
         input {
@@ -584,6 +644,24 @@ export default function Admin() {
           border-color: #8b5e34;
           background: #8b5e34;
           color: #fff;
+        }
+
+        .menuStatus {
+          display: inline-flex;
+          border-radius: 999px;
+          padding: 4px 10px;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .menuStatus.available {
+          background: #eefaf2;
+          color: #14532d;
+        }
+
+        .menuStatus.soldOut {
+          background: #fff1f1;
+          color: #8a1f1f;
         }
 
         .tableWrap {

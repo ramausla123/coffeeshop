@@ -26,6 +26,9 @@ export class OrdersService {
       if (!menuItem) {
         throw new BadRequestException(`menuId ${it.menuId} not found`);
       }
+      if (menuItem.isAvailable === false) {
+        throw new BadRequestException(`${menuItem.name} is currently unavailable`);
+      }
       total += menuItem.price * it.quantity;
     }
 
@@ -70,6 +73,9 @@ export class OrdersService {
   async updatePayment(id: number, paidAmount: number) {
     const order = await this.orderRepository.findOne({ where: { id } });
     if (!order) return undefined;
+    if (order.paymentStatus === 'paid') {
+      throw new BadRequestException(`Order #${id} has already been paid`);
+    }
     if (paidAmount < order.total) {
       throw new BadRequestException(`Paid amount (${paidAmount}) must be >= order total (${order.total})`);
     }

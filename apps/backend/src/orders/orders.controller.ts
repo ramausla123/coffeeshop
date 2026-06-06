@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { isOrderStatus } from './order-status';
+import { UpdatePaymentDto } from './dto/update-payment.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -42,9 +43,8 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'cashier')
   @Patch(':id/payment')
-  async updatePayment(@Param('id') id: string, @Body('paidAmount') paidAmount: number) {
-    if (!paidAmount || paidAmount <= 0) throw new BadRequestException('Invalid paid amount');
-    const order = await this.ordersService.updatePayment(Number(id), paidAmount);
+  async updatePayment(@Param('id') id: string, @Body() body: UpdatePaymentDto) {
+    const order = await this.ordersService.updatePayment(Number(id), body.paidAmount);
     if (!order) throw new BadRequestException('Order not found');
     return order;
   }
