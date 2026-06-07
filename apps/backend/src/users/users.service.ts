@@ -35,23 +35,51 @@ export class UsersService implements OnModuleInit {
     return bcrypt.compare(password, user.password);
   }
 
+  async updatePassword(id: number, password: string): Promise<void> {
+    const hashed = await bcrypt.hash(password, 8);
+    await this.userRepository.update(id, { password: hashed });
+  }
+
   private async seedDefaultUsers() {
+    const defaults = this.getDefaultUsers();
+
     const hasAdmin = await this.userRepository.exist({ where: { username: 'admin' } });
     if (!hasAdmin) {
-      await this.create('admin', 'admin123', 'admin');
-      this.logger.log('Created default admin user: admin / admin123');
+      await this.create('admin', defaults.admin, 'admin');
+      this.logger.log('Created default admin user');
     }
 
     const hasKitchen = await this.userRepository.exist({ where: { username: 'kitchen' } });
     if (!hasKitchen) {
-      await this.create('kitchen', 'kitchen123', 'kitchen');
-      this.logger.log('Created default kitchen user: kitchen / kitchen123');
+      await this.create('kitchen', defaults.kitchen, 'kitchen');
+      this.logger.log('Created default kitchen user');
     }
 
     const hasCashier = await this.userRepository.exist({ where: { username: 'cashier' } });
     if (!hasCashier) {
-      await this.create('cashier', 'cashier123', 'cashier');
-      this.logger.log('Created default cashier user: cashier / cashier123');
+      await this.create('cashier', defaults.cashier, 'cashier');
+      this.logger.log('Created default cashier user');
     }
+  }
+
+  private getDefaultUsers() {
+    const defaults = {
+      admin: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123',
+      kitchen: process.env.DEFAULT_KITCHEN_PASSWORD || 'kitchen123',
+      cashier: process.env.DEFAULT_CASHIER_PASSWORD || 'cashier123',
+    };
+
+    if (process.env.NODE_ENV === 'production') {
+      const unsafe =
+        defaults.admin === 'admin123' ||
+        defaults.kitchen === 'kitchen123' ||
+        defaults.cashier === 'cashier123';
+
+      if (unsafe) {
+        throw new Error('Set DEFAULT_ADMIN_PASSWORD, DEFAULT_KITCHEN_PASSWORD, and DEFAULT_CASHIER_PASSWORD in production');
+      }
+    }
+
+    return defaults;
   }
 }

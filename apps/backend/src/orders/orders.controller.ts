@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { isOrderStatus } from './order-status';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { OrderCorrectionDto } from './dto/order-correction.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -45,6 +46,24 @@ export class OrdersController {
   @Patch(':id/payment')
   async updatePayment(@Param('id') id: string, @Body() body: UpdatePaymentDto) {
     const order = await this.ordersService.updatePayment(Number(id), body.paidAmount);
+    if (!order) throw new BadRequestException('Order not found');
+    return order;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cashier')
+  @Patch(':id/cancel')
+  async cancel(@Param('id') id: string, @Body() body: OrderCorrectionDto) {
+    const order = await this.ordersService.cancel(Number(id), body.reason);
+    if (!order) throw new BadRequestException('Order not found');
+    return order;
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'cashier')
+  @Patch(':id/refund')
+  async refund(@Param('id') id: string, @Body() body: OrderCorrectionDto) {
+    const order = await this.ordersService.refund(Number(id), body.reason);
     if (!order) throw new BadRequestException('Order not found');
     return order;
   }

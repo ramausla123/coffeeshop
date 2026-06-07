@@ -14,6 +14,10 @@ Create `.env` in `apps/backend`:
 DB_TYPE=sqlite
 DB_PATH=./coffee.db
 JWT_SECRET=change-this-secret
+DEFAULT_ADMIN_PASSWORD=change-admin-password
+DEFAULT_KITCHEN_PASSWORD=change-kitchen-password
+DEFAULT_CASHIER_PASSWORD=change-cashier-password
+WS_PORT=4002
 NODE_ENV=development
 ```
 
@@ -58,6 +62,7 @@ The backend also starts a Socket.io server for real-time order updates. By defau
 - Kitchen Display System - order status screen (http://localhost:3000/kds)
 - Admin Dashboard - menu CRUD + reports (http://localhost:3000/admin)
 - Cashier Dashboard - process payments and print receipts (http://localhost:3000/cashier)
+- Account Settings - staff can change their own password (http://localhost:3000/account)
 - Menu availability - mark menu items as available or sold out
 - Notifications - toast + sound alerts on new orders
 - Real-time updates - Socket.io broadcasts order, status, and payment changes
@@ -67,9 +72,10 @@ The backend also starts a Socket.io server for real-time order updates. By defau
 ## API Endpoints
 
 - `GET /menu`, `POST /menu`, `PATCH /menu/:id`, `DELETE /menu/:id`
-- `POST /orders`, `GET /orders`, `GET /orders/:id`, `PATCH /orders/:id/status`
-- `PATCH /orders/:id/payment`
-- `POST /auth/login`, `GET /auth/profile`
+- `POST /orders`, `GET /orders`, `GET /orders/:id`
+- `PATCH /orders/:id/status`, `PATCH /orders/:id/payment`
+- `PATCH /orders/:id/cancel`, `PATCH /orders/:id/refund`
+- `POST /auth/login`, `GET /auth/profile`, `POST /auth/change-password`
 
 ## Architecture
 
@@ -79,6 +85,12 @@ The backend also starts a Socket.io server for real-time order updates. By defau
 - Database: auto-sync in development
 
 See [DATABASE.md](DATABASE.md) for database notes and seeding.
+
+## Staff Accounts
+
+Development fallback accounts are `admin/admin123`, `kitchen/kitchen123`, and `cashier/cashier123`.
+For real use, set the `DEFAULT_*_PASSWORD` values before the first backend start, then change staff passwords from `/account`.
+In production, the backend refuses to start if the default fallback passwords are still used.
 
 ## Table QR Links
 

@@ -14,7 +14,7 @@ export type MenuItem = {
   isAvailable?: boolean;
 };
 
-export type OrderStatus = 'received' | 'preparing' | 'ready' | 'served';
+export type OrderStatus = 'received' | 'preparing' | 'ready' | 'served' | 'canceled';
 
 export type OrderItem = {
   menuId: number;
@@ -29,9 +29,12 @@ export type Order = {
   items: OrderItem[];
   status: OrderStatus;
   total: number;
-  paymentStatus?: 'pending' | 'paid';
+  paymentStatus?: 'pending' | 'paid' | 'refunded';
   paidAmount?: number;
   paidAt?: string;
+  canceledAt?: string;
+  refundedAt?: string;
+  correctionReason?: string;
   createdAt?: string;
   updatedAt?: string;
 };

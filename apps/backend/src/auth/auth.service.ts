@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
@@ -32,5 +32,20 @@ export class AuthService {
     const valid = await this.usersService.validatePassword(user, password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
     return user;
+  }
+
+  async changePassword(userId: number, currentPassword: string, newPassword: string) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new UnauthorizedException();
+
+    const valid = await this.usersService.validatePassword(user, currentPassword);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+    if (currentPassword === newPassword) {
+      throw new BadRequestException('New password must be different');
+    }
+
+    await this.usersService.updatePassword(user.id, newPassword);
+    return { success: true };
   }
 }

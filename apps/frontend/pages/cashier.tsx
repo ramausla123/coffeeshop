@@ -37,7 +37,7 @@ export default function Cashier() {
   }, [selectedOrder, paidAmount]);
 
   const unpaidOrders = useMemo(() => {
-    return orders.filter((o) => o.paymentStatus !== 'paid');
+    return orders.filter((o) => o.paymentStatus !== 'paid' && o.status !== 'canceled');
   }, [orders]);
 
   useEffect(() => {
@@ -160,6 +160,42 @@ export default function Cashier() {
     }
   }
 
+  async function cancelSelectedOrder() {
+    if (!selectedOrder || saving) return;
+    const reason = prompt(`Alasan batalkan order #${selectedOrder.id}?`);
+    if (reason === null) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const res = await fetch(apiUrl(`/orders/${selectedOrder.id}/cancel`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ reason: reason.trim() || undefined }),
+      });
+
+      if (res.status === 401) {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Cancel failed');
+      }
+
+      setSelectedOrderId(null);
+      setPaidAmount(0);
+      await fetchOrders();
+    } catch (err: any) {
+      setError(err?.message || 'Gagal membatalkan order.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function handleLogout() {
     clearToken();
     router.push('/login');
@@ -175,6 +211,9 @@ export default function Cashier() {
         <div className="actions">
           <button type="button" onClick={fetchOrders} disabled={loading}>
             Refresh
+          </button>
+          <button type="button" onClick={() => router.push('/account')}>
+            Akun
           </button>
           <button type="button" onClick={handleLogout}>
             Logout
@@ -304,6 +343,14 @@ export default function Cashier() {
                 className="payButton"
               >
                 {saving ? 'Memproses...' : 'Terima Pembayaran'}
+              </button>
+              <button
+                type="button"
+                onClick={cancelSelectedOrder}
+                disabled={saving}
+                className="cancelButton"
+              >
+                Batalkan Order
               </button>
             </div>
           </div>
@@ -622,6 +669,22 @@ export default function Cashier() {
         }
 
         .payButton:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .cancelButton {
+          padding: 12px;
+          background: #fff;
+          color: #c33;
+          border: 1px solid #f0b8b8;
+          border-radius: 4px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .cancelButton:disabled {
           opacity: 0.5;
           cursor: not-allowed;
         }

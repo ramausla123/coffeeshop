@@ -40,13 +40,22 @@ export class Order {
   total!: number;
 
   @Column({ type: 'varchar', length: 20, default: 'pending' })
-  paymentStatus!: 'pending' | 'paid';
+  paymentStatus!: 'pending' | 'paid' | 'refunded';
 
   @Column({ type: 'integer', nullable: true })
   paidAmount?: number;
 
   @Column({ type: 'datetime', nullable: true })
   paidAt?: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  canceledAt?: Date;
+
+  @Column({ type: 'datetime', nullable: true })
+  refundedAt?: Date;
+
+  @Column({ type: 'text', nullable: true })
+  correctionReason?: string;
 
   @CreateDateColumn()
   createdAt!: Date;

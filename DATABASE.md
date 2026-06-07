@@ -19,6 +19,10 @@ Create `.env` in `apps/backend`:
 DB_TYPE=sqlite
 DB_PATH=./coffee.db
 JWT_SECRET=change-this-secret
+DEFAULT_ADMIN_PASSWORD=change-admin-password
+DEFAULT_KITCHEN_PASSWORD=change-kitchen-password
+DEFAULT_CASHIER_PASSWORD=change-cashier-password
+WS_PORT=4002
 NODE_ENV=development
 ```
 
@@ -43,7 +47,10 @@ Default users are seeded automatically on backend startup:
 ```text
 admin / admin123
 kitchen / kitchen123
+cashier / cashier123
 ```
+
+For real use, set `DEFAULT_ADMIN_PASSWORD`, `DEFAULT_KITCHEN_PASSWORD`, and `DEFAULT_CASHIER_PASSWORD` before the first backend start.
 
 Login and use the returned token:
 

@@ -1,4 +1,4 @@
-export const ORDER_STATUSES = ['received', 'preparing', 'ready', 'served'] as const;
+export const ORDER_STATUSES = ['received', 'preparing', 'ready', 'served', 'canceled'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 

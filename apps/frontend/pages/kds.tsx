@@ -15,6 +15,7 @@ const statusLabel = {
   preparing: 'Diproses',
   ready: 'Siap',
   served: 'Selesai',
+  canceled: 'Batal',
 };
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -173,7 +174,7 @@ export default function KDS() {
   }, []);
 
   async function nextStatus(order: Order) {
-    const idx = statusFlow.indexOf(order.status);
+    const idx = statusFlow.indexOf(order.status as (typeof statusFlow)[number]);
     if (idx === -1 || idx === statusFlow.length - 1) return;
 
     const next = statusFlow[idx + 1];
@@ -198,6 +199,12 @@ export default function KDS() {
     }
   }
 
+  function getNextStatusLabel(order: Order) {
+    const idx = statusFlow.indexOf(order.status as (typeof statusFlow)[number]);
+    if (idx === -1 || idx === statusFlow.length - 1) return '';
+    return statusLabel[statusFlow[idx + 1]];
+  }
+
   function logout() {
     clearToken();
     router.push('/login');
@@ -215,6 +222,9 @@ export default function KDS() {
         <div className="actions">
           <button type="button" onClick={fetchOrders} disabled={loading}>
             {loading ? 'Memuat...' : 'Refresh'}
+          </button>
+          <button type="button" onClick={() => router.push('/account')}>
+            Akun
           </button>
           <button type="button" onClick={logout}>
             Logout
@@ -263,7 +273,7 @@ export default function KDS() {
                     <div className="orderFoot">
                       <strong>{currency.format(order.total)}</strong>
                       <button type="button" onClick={() => nextStatus(order)}>
-                        Next: {statusLabel[statusFlow[statusFlow.indexOf(order.status) + 1]]}
+                        Next: {getNextStatusLabel(order)}
                       </button>
                     </div>
                   </article>

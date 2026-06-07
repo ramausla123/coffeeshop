@@ -21,6 +21,7 @@ const orderFilters: { value: OrderFilter; label: string }[] = [
   { value: 'preparing', label: 'Diproses' },
   { value: 'ready', label: 'Siap' },
   { value: 'served', label: 'Selesai' },
+  { value: 'canceled', label: 'Batal' },
 ];
 
 const dateFilters: { value: DateFilter; label: string }[] = [
@@ -59,7 +60,7 @@ export default function Admin() {
         acc[order.status] += 1;
         return acc;
       },
-      { received: 0, preparing: 0, ready: 0, served: 0 },
+      { received: 0, preparing: 0, ready: 0, served: 0, canceled: 0 },
     );
 
     return {
@@ -239,6 +240,36 @@ export default function Admin() {
     router.push('/login');
   }
 
+  async function correctOrder(order: Order) {
+    const action = order.paymentStatus === 'paid' ? 'refund' : 'cancel';
+    const label = action === 'refund' ? 'refund' : 'batalkan';
+    const reason = prompt(`Alasan ${label} order #${order.id}?`);
+    if (reason === null) return;
+
+    try {
+      const res = await fetch(apiUrl(`/orders/${order.id}/${action}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ reason: reason.trim() || undefined }),
+      });
+
+      if (res.status === 401) {
+        clearToken();
+        router.push('/login');
+        return;
+      }
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.message || 'Correction failed');
+      }
+
+      await fetchData();
+    } catch (err: any) {
+      setError(err?.message || 'Gagal melakukan koreksi order.');
+    }
+  }
+
   async function toggleAvailability(item: MenuItem) {
     try {
       const res = await fetch(apiUrl(`/menu/${item.id}`), {
@@ -270,6 +301,9 @@ export default function Admin() {
         <div className="actions">
           <button type="button" onClick={fetchData} disabled={loading}>
             Refresh
+          </button>
+          <button type="button" onClick={() => router.push('/account')}>
+            Akun
           </button>
           <button type="button" onClick={handleLogout}>
             Logout
@@ -432,7 +466,9 @@ export default function Admin() {
                   <th>Meja</th>
                   <th>Item</th>
                   <th>Status</th>
+                  <th>Pembayaran</th>
                   <th>Total</th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
               <tbody>
@@ -454,12 +490,22 @@ export default function Admin() {
                     <td>
                       <span className={`status ${order.status}`}>{order.status}</span>
                     </td>
+                    <td>{order.paymentStatus || 'pending'}</td>
                     <td>{currency.format(order.total)}</td>
+                    <td>
+                      {order.status !== 'canceled' && order.paymentStatus !== 'refunded' ? (
+                        <button type="button" onClick={() => correctOrder(order)}>
+                          {order.paymentStatus === 'paid' ? 'Refund' : 'Batal'}
+                        </button>
+                      ) : (
+                        order.correctionReason || '-'
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {!loading && filteredOrders.length === 0 && (
                   <tr>
-                    <td colSpan={6}>Tidak ada order untuk filter ini.</td>
+                    <td colSpan={8}>Tidak ada order untuk filter ini.</td>
                   </tr>
                 )}
               </tbody>
@@ -730,6 +776,11 @@ export default function Admin() {
         .status.served {
           background: #f1f5f9;
           color: #475569;
+        }
+
+        .status.canceled {
+          background: #fff1f1;
+          color: #8a1f1f;
         }
 
         @media (max-width: 920px) {

@@ -60,6 +60,9 @@ export class OrdersService {
   async updateStatus(id: number, status: OrderStatus) {
     const order = await this.orderRepository.findOne({ where: { id } });
     if (!order) return undefined;
+    if (order.status === 'canceled') {
+      throw new BadRequestException(`Order #${id} has been canceled`);
+    }
     order.status = status;
     const updated = await this.orderRepository.save(order);
     const enriched = await this.enrichOrder(updated);
@@ -75,6 +78,9 @@ export class OrdersService {
     if (!order) return undefined;
     if (order.paymentStatus === 'paid') {
       throw new BadRequestException(`Order #${id} has already been paid`);
+    }
+    if (order.status === 'canceled') {
+      throw new BadRequestException(`Order #${id} has been canceled`);
     }
     if (paidAmount < order.total) {
       throw new BadRequestException(`Paid amount (${paidAmount}) must be >= order total (${order.total})`);
@@ -94,6 +100,42 @@ export class OrdersService {
       console.error(`Failed to print receipt for order ${id}:`, err);
     });
 
+    return enriched;
+  }
+
+  async cancel(id: number, reason?: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) return undefined;
+    if (order.status === 'canceled') {
+      throw new BadRequestException(`Order #${id} has already been canceled`);
+    }
+    if (order.paymentStatus === 'paid') {
+      throw new BadRequestException(`Order #${id} is paid. Use refund instead.`);
+    }
+
+    order.status = 'canceled';
+    order.canceledAt = new Date();
+    order.correctionReason = reason || 'Canceled by staff';
+    const updated = await this.orderRepository.save(order);
+    const enriched = await this.enrichOrder(updated);
+    this.ordersGateway.broadcastOrderUpdate(enriched);
+    return enriched;
+  }
+
+  async refund(id: number, reason?: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) return undefined;
+    if (order.paymentStatus !== 'paid') {
+      throw new BadRequestException(`Order #${id} has not been paid`);
+    }
+
+    order.paymentStatus = 'refunded';
+    order.status = 'canceled';
+    order.refundedAt = new Date();
+    order.correctionReason = reason || 'Refunded by staff';
+    const updated = await this.orderRepository.save(order);
+    const enriched = await this.enrichOrder(updated);
+    this.ordersGateway.broadcastOrderUpdate(enriched);
     return enriched;
   }
 
