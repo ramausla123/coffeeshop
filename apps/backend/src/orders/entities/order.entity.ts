@@ -45,13 +45,13 @@ export class Order {
   @Column({ type: 'integer', nullable: true })
   paidAmount?: number;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   paidAt?: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   canceledAt?: Date;
 
-  @Column({ type: 'datetime', nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   refundedAt?: Date;
 
   @Column({ type: 'text', nullable: true })

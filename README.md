@@ -1,27 +1,38 @@
 # Coffee Shop Starter Monorepo
 
-Starter monorepo containing a Next.js PWA frontend and a NestJS backend with SQLite.
+Starter monorepo containing a Next.js PWA frontend and a NestJS backend using TypeORM with Supabase/Postgres.
 
 ## Quick Setup
 
 ### 1. Database Setup
 
-The backend uses SQLite by default. No separate database server is required.
+The backend is configured for Supabase Postgres by default. Create a Supabase project, then use the direct database connection settings from Project Settings > Database.
 
 Create `.env` in `apps/backend`:
 
 ```env
-DB_TYPE=sqlite
-DB_PATH=./coffee.db
-JWT_SECRET=change-this-secret
+NODE_ENV=development
+DB_TYPE=postgres
+
+# Option A: Supabase connection string
+# DATABASE_URL=postgresql://postgres:your-database-password@db.your-project-ref.supabase.co:5432/postgres
+
+# Option B: connection parts
+DB_HOST=db.your-project-ref.supabase.co
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your-database-password
+DB_NAME=postgres
+DB_SSL=true
+DB_MIGRATIONS_RUN=false
+JWT_SECRET=change-this-secret-to-a-long-random-string
 DEFAULT_ADMIN_PASSWORD=change-admin-password
 DEFAULT_KITCHEN_PASSWORD=change-kitchen-password
 DEFAULT_CASHIER_PASSWORD=change-cashier-password
 WS_PORT=4002
-NODE_ENV=development
 ```
 
-TypeORM will create/update the local `coffee.db` file automatically in development.
+TypeORM will auto-sync the schema while `NODE_ENV` is not `production`. For production, set `NODE_ENV=production`, keep `synchronize` disabled, and run migrations intentionally.
 
 Optional frontend env:
 
@@ -33,9 +44,7 @@ NEXT_PUBLIC_WS_URL=http://localhost:4002
 ### 2. Install Dependencies
 
 ```bash
-npm install  # Root
-cd apps/frontend && npm install
-cd ../backend && npm install
+npm install
 ```
 
 ### 3. Run Services
@@ -66,7 +75,7 @@ The backend also starts a Socket.io server for real-time order updates. By defau
 - Menu availability - mark menu items as available or sold out
 - Notifications - toast + sound alerts on new orders
 - Real-time updates - Socket.io broadcasts order, status, and payment changes
-- SQLite - local development database via `coffee.db`
+- Supabase/Postgres - shared database through TypeORM
 - Default menu seed - starter coffee menu is created when the menu table is empty
 
 ## API Endpoints
@@ -80,9 +89,9 @@ The backend also starts a Socket.io server for real-time order updates. By defau
 ## Architecture
 
 - Frontend: Next.js 14 + React 18 + TypeScript
-- Backend: NestJS 10 + TypeORM + SQLite
+- Backend: NestJS 10 + TypeORM + Postgres
 - Realtime: Socket.io
-- Database: auto-sync in development
+- Database: Supabase Postgres, auto-sync in development, migrations for production
 
 See [DATABASE.md](DATABASE.md) for database notes and seeding.
 
