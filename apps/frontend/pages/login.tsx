@@ -51,7 +51,7 @@ export default function LoginPage() {
         <div className="intro">
           <p>Staff Area</p>
           <h1>Masuk ke Dashboard</h1>
-          <span>Gunakan akun admin, kitchen, atau cashier untuk mengelola operasional coffee shop.</span>
+          <span>Akses khusus staff untuk mengelola order, dapur, pembayaran, dan menu.</span>
         </div>
 
         <form onSubmit={handleSubmit} className="form">
@@ -61,7 +61,7 @@ export default function LoginPage() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="username"
-              placeholder="admin"
+              placeholder="Masukkan username"
             />
           </label>
 
@@ -72,7 +72,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
-              placeholder="admin123"
+              placeholder="Masukkan password"
             />
           </label>
 
@@ -82,39 +82,28 @@ export default function LoginPage() {
             {loading ? 'Memproses...' : 'Login'}
           </button>
         </form>
-
-        <div className="credentials">
-          <div>
-            <span>Admin</span>
-            <strong>admin / admin123</strong>
-          </div>
-          <div>
-            <span>Kitchen</span>
-            <strong>kitchen / kitchen123</strong>
-          </div>
-          <div>
-            <span>Cashier</span>
-            <strong>cashier / cashier123</strong>
-          </div>
-        </div>
       </section>
 
       <style jsx>{`
         .page {
           display: grid;
+          max-width: none;
           min-height: 100%;
+          margin: 0;
           place-items: center;
+          background: #f6f7f9;
           padding: 32px 20px;
-          color: #1f2933;
+          color: #111827;
         }
 
         .panel {
           width: 100%;
-          max-width: 460px;
-          border: 1px solid #d8dee4;
+          max-width: 430px;
+          border: 1px solid #e5e7eb;
           border-radius: 8px;
           background: #fff;
-          padding: 28px;
+          padding: 30px;
+          box-shadow: 0 12px 30px rgba(16, 24, 40, 0.08);
         }
 
         .intro {
@@ -126,19 +115,19 @@ export default function LoginPage() {
         .intro p {
           margin: 0;
           color: #8b5e34;
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 0;
           text-transform: uppercase;
         }
 
         h1 {
           margin: 0;
-          font-size: 28px;
+          font-size: 30px;
           line-height: 1.15;
         }
 
-        .intro span,
-        .credentials span {
+        .intro span {
           color: #667085;
           font-size: 14px;
           line-height: 1.45;
@@ -157,7 +146,7 @@ export default function LoginPage() {
         }
 
         input {
-          min-height: 44px;
+          min-height: 46px;
           border: 1px solid #c9d1d9;
           border-radius: 8px;
           padding: 0 12px;
@@ -185,7 +174,7 @@ export default function LoginPage() {
           background: #8b5e34;
           color: #fff;
           font: inherit;
-          font-weight: 700;
+          font-weight: 800;
           cursor: pointer;
         }
 
@@ -194,32 +183,9 @@ export default function LoginPage() {
           opacity: 0.55;
         }
 
-        .credentials {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-          margin-top: 20px;
-        }
-
-        .credentials div {
-          display: grid;
-          gap: 4px;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 12px;
-        }
-
-        .credentials strong {
-          font-size: 13px;
-        }
-
         @media (max-width: 520px) {
           .panel {
             padding: 22px;
-          }
-
-          .credentials {
-            grid-template-columns: 1fr;
           }
         }
       `}</style>
