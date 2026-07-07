@@ -14,7 +14,7 @@ export type MenuItem = {
   isAvailable?: boolean;
 };
 
-export type OrderStatus = 'received' | 'preparing' | 'ready' | 'served' | 'canceled';
+export type OrderStatus = 'pending_payment' | 'received' | 'preparing' | 'ready' | 'served' | 'canceled';
 
 export type OrderItem = {
   menuId: number;

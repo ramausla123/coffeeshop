@@ -35,14 +35,14 @@ export class OrdersService {
     const newOrder = this.orderRepository.create({
       table: order.table,
       items: order.items as any,
-      status: 'received',
+      status: 'pending_payment',
       total,
     });
     const saved = await this.orderRepository.save(newOrder);
     const enriched = await this.enrichOrder(saved);
 
-    // Broadcast new order to connected clients
-    this.ordersGateway.broadcastNewOrder(enriched);
+    // Notify cashier/admin that a new unpaid QR order is waiting.
+    this.ordersGateway.broadcastOrderUpdate(enriched);
 
     return enriched;
   }
@@ -86,13 +86,18 @@ export class OrdersService {
       throw new BadRequestException(`Paid amount (${paidAmount}) must be >= order total (${order.total})`);
     }
     order.paymentStatus = 'paid';
+    if (order.status === 'pending_payment') {
+      order.status = 'received';
+    }
     order.paidAmount = paidAmount;
     order.paidAt = new Date();
     const updated = await this.orderRepository.save(order);
     const enriched = await this.enrichOrder(updated);
 
-    // Broadcast payment update to connected clients
     this.ordersGateway.broadcastPaymentUpdate(enriched);
+    if (updated.status === 'received') {
+      this.ordersGateway.broadcastNewOrder(enriched);
+    }
 
     // Trigger receipt printing
     const change = paidAmount - order.total;

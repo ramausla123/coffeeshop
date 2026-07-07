@@ -17,6 +17,7 @@ type DateFilter = 'today' | 'all';
 
 const orderFilters: { value: OrderFilter; label: string }[] = [
   { value: 'all', label: 'Semua' },
+  { value: 'pending_payment', label: 'Menunggu Bayar' },
   { value: 'received', label: 'Baru' },
   { value: 'preparing', label: 'Diproses' },
   { value: 'ready', label: 'Siap' },
@@ -60,7 +61,7 @@ export default function Admin() {
         acc[order.status] += 1;
         return acc;
       },
-      { received: 0, preparing: 0, ready: 0, served: 0, canceled: 0 },
+      { pending_payment: 0, received: 0, preparing: 0, ready: 0, served: 0, canceled: 0 },
     );
 
     return {
@@ -488,7 +489,7 @@ export default function Admin() {
                       </div>
                     </td>
                     <td>
-                      <span className={`status ${order.status}`}>{order.status}</span>
+                      <span className={`status ${order.status}`}>{formatOrderStatus(order.status)}</span>
                     </td>
                     <td>{order.paymentStatus || 'pending'}</td>
                     <td>{currency.format(order.total)}</td>
@@ -763,6 +764,11 @@ export default function Admin() {
           color: #8b5e00;
         }
 
+        .status.pending_payment {
+          background: #fff7e8;
+          color: #92400e;
+        }
+
         .status.preparing {
           background: #e8f1ff;
           color: #174ea6;
@@ -843,4 +849,16 @@ function isToday(value?: string) {
 function formatOrderDate(value?: string) {
   if (!value) return '-';
   return dateTimeFormatter.format(new Date(value));
+}
+
+function formatOrderStatus(status: OrderStatus) {
+  const labels: Record<OrderStatus, string> = {
+    pending_payment: 'Menunggu bayar',
+    received: 'Baru',
+    preparing: 'Diproses',
+    ready: 'Siap',
+    served: 'Selesai',
+    canceled: 'Batal',
+  };
+  return labels[status];
 }

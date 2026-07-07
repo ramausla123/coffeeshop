@@ -11,12 +11,17 @@ const statusFlow = ['received', 'preparing', 'ready', 'served'] as const;
 const activeStatuses = ['received', 'preparing', 'ready'] as const;
 
 const statusLabel = {
+  pending_payment: 'Menunggu Bayar',
   received: 'Baru',
   preparing: 'Diproses',
   ready: 'Siap',
   served: 'Selesai',
   canceled: 'Batal',
 };
+
+function isKitchenOrder(order: Order) {
+  return order.paymentStatus === 'paid' && activeStatuses.includes(order.status as (typeof activeStatuses)[number]);
+}
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -87,7 +92,7 @@ export default function KDS() {
 
       if (!res.ok) throw new Error('Orders request failed');
 
-      const data = await res.json();
+      const data = (await res.json()).filter(isKitchenOrder);
       const newOrders = data.filter((order: Order) => !knownOrderIds.current.has(order.id));
 
       if (initialized.current && newOrders.length > 0) {
@@ -138,6 +143,7 @@ export default function KDS() {
 
             if (event === 'order:new') {
               setError(null)
+              if (!isKitchenOrder(data)) return;
               if (!knownOrderIds.current.has(data.id)) {
                 knownOrderIds.current.add(data.id);
                 playNotificationSound();
@@ -150,12 +156,15 @@ export default function KDS() {
               }
             } else if (event === 'order:updated') {
               setError(null)
-              setOrders((prev) =>
-                prev.map((o) => (o.id === data.id ? data : o))
-              );
+              setOrders((prev) => {
+                if (!isKitchenOrder(data)) {
+                  return prev.filter((o) => o.id !== data.id);
+                }
+                return prev.map((o) => (o.id === data.id ? data : o));
+              });
             } else if (event === 'orders:refresh') {
               setError(null)
-              setOrders(data);
+              setOrders(data.filter(isKitchenOrder));
             }
           });
         }

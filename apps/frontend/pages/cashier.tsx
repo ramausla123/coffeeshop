@@ -37,7 +37,7 @@ export default function Cashier() {
   }, [selectedOrder, paidAmount]);
 
   const unpaidOrders = useMemo(() => {
-    return orders.filter((o) => o.paymentStatus !== 'paid' && o.status !== 'canceled');
+    return orders.filter((o) => o.paymentStatus === 'pending' && o.status !== 'canceled');
   }, [orders]);
 
   useEffect(() => {
@@ -272,6 +272,7 @@ export default function Cashier() {
                   </div>
                   <strong style={{ fontSize: 16 }}>{currency.format(order.total)}</strong>
                 </div>
+                {order.status === 'pending_payment' && <span className="badge pending">Menunggu bayar</span>}
                 {order.paymentStatus === 'paid' && <span className="badge">Lunas</span>}
               </article>
             ))}
@@ -563,6 +564,10 @@ export default function Cashier() {
           font-size: 12px;
           font-weight: 600;
           margin-left: 12px;
+        }
+
+        .badge.pending {
+          background: #f59e0b;
         }
 
         .paymentForm {

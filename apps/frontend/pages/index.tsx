@@ -152,8 +152,8 @@ export default function Home() {
         <div className="success orderSummary">
           <div className="orderSummaryHead">
             <div>
-              <strong>Order #{orderResult.id} berhasil dibuat</strong>
-              <span>Status: {orderResult.status}</span>
+              <strong>Order #{orderResult.id} menunggu pembayaran</strong>
+              <span>Pesanan akan masuk dapur setelah pembayaran dikonfirmasi kasir.</span>
             </div>
             <strong>{currency.format(orderResult.total)}</strong>
           </div>
