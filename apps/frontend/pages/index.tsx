@@ -16,17 +16,22 @@ export default function Home() {
   const [menu, setMenu] = useState<MenuItem[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [table, setTable] = useState('')
-  const [orderResult, setOrderResult] = useState<any>(null)
   const [loadingMenu, setLoadingMenu] = useState(true)
-  const [placingOrder, setPlacingOrder] = useState(false)
-  const [redirectingPayment, setRedirectingPayment] = useState(false)
-  const [paymentChoice, setPaymentChoice] = useState<'online' | 'cash'>('online')
   const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart])
 
   useEffect(() => {
     fetchMenu()
+    const raw = window.localStorage.getItem('coffee_checkout')
+    if (!raw) return
+    try {
+      const draft = JSON.parse(raw)
+      if (Array.isArray(draft.items)) setCart(draft.items)
+      if (typeof draft.table === 'string') setTable(draft.table)
+    } catch {
+      window.localStorage.removeItem('coffee_checkout')
+    }
   }, [])
 
   useEffect(() => {
@@ -56,7 +61,6 @@ export default function Home() {
   function addToCart(item: MenuItem) {
     if (item.isAvailable === false) return
 
-    setOrderResult(null)
     setCart((current) => {
       const existing = current.find((cartItem) => cartItem.menuId === item.id)
       if (existing) {
@@ -89,59 +93,15 @@ export default function Home() {
     setCart((current) => current.map((item) => (item.id === id ? { ...item, note } : item)))
   }
 
-  async function placeOrder() {
-    if (cart.length === 0 || placingOrder || redirectingPayment) return
+  function goToCheckout() {
+    if (cart.length === 0) return
 
-    setPlacingOrder(true)
-    setError(null)
-
-    const body = {
-      table: table.trim() || undefined,
-      paymentMethod: paymentChoice === 'cash' ? 'cash' : 'midtrans',
-      items: cart.map((item) => ({
-        menuId: item.menuId,
-        quantity: item.qty,
-        note: item.note.trim() || undefined,
-      })),
+    const checkout = {
+      table: table.trim(),
+      items: cart,
     }
-
-    try {
-      const res = await fetch(apiUrl('/orders'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data?.message || 'Order request failed')
-
-      setOrderResult(data)
-      setCart([])
-
-      if (paymentChoice === 'cash') {
-        router.push(`/order-status?orderId=${data.id}${table.trim() ? `&table=${encodeURIComponent(table.trim())}` : ''}&payment=cash`)
-        return
-      }
-
-      setRedirectingPayment(true)
-
-      const paymentRes = await fetch(apiUrl('/payments/midtrans/create'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: data.id }),
-      })
-      const paymentData = await paymentRes.json()
-      if (!paymentRes.ok || !paymentData.redirectUrl) {
-        throw new Error(paymentData?.message || 'Payment request failed')
-      }
-
-      window.location.href = paymentData.redirectUrl
-    } catch {
-      setError('Gagal membuat pembayaran. Silakan coba ulang atau hubungi kasir.')
-      setRedirectingPayment(false)
-    } finally {
-      setPlacingOrder(false)
-    }
+    window.localStorage.setItem('coffee_checkout', JSON.stringify(checkout))
+    router.push(`/checkout${table.trim() ? `?table=${encodeURIComponent(table.trim())}` : ''}`)
   }
 
   return (
@@ -168,36 +128,6 @@ export default function Home() {
           <button type="button" onClick={fetchMenu}>
             Coba lagi
           </button>
-        </div>
-      )}
-
-      {orderResult && (
-        <div className="success orderSummary">
-          <div className="orderSummaryHead">
-            <div>
-              <strong>Order #{orderResult.id} menunggu pembayaran</strong>
-              <span>
-                {redirectingPayment
-                  ? 'Mengarahkan ke pembayaran...'
-                  : paymentChoice === 'cash'
-                    ? 'Silakan bayar cash di kasir. Pesanan akan masuk dapur setelah kasir mengonfirmasi pembayaran.'
-                    : 'Pesanan akan masuk dapur setelah pembayaran berhasil.'}
-              </span>
-            </div>
-            <strong>{currency.format(orderResult.total)}</strong>
-          </div>
-          {orderResult.items?.length > 0 && (
-            <ul>
-              {orderResult.items.map((item: any, index: number) => (
-                <li key={`${item.menuId}-${index}`}>
-                  <span>
-                    {item.name || 'Item'} x {item.quantity}
-                  </span>
-                  {item.note && <em>{item.note}</em>}
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       )}
 
@@ -296,36 +226,13 @@ export default function Home() {
             <strong>{currency.format(total)}</strong>
           </div>
 
-          <div className="paymentChoice" aria-label="Pilihan pembayaran">
-            <button
-              type="button"
-              className={paymentChoice === 'online' ? 'active' : ''}
-              onClick={() => setPaymentChoice('online')}
-            >
-              Bayar Online
-            </button>
-            <button
-              type="button"
-              className={paymentChoice === 'cash' ? 'active' : ''}
-              onClick={() => setPaymentChoice('cash')}
-            >
-              Cash di Kasir
-            </button>
-          </div>
-
           <button
             type="button"
             className="checkout"
-            onClick={placeOrder}
-            disabled={cart.length === 0 || placingOrder || redirectingPayment}
+            onClick={goToCheckout}
+            disabled={cart.length === 0}
           >
-            {redirectingPayment
-              ? 'Membuka pembayaran...'
-              : placingOrder
-                ? 'Mengirim...'
-                : paymentChoice === 'cash'
-                  ? 'Buat Order Cash'
-                  : 'Bayar Sekarang'}
+            Checkout
           </button>
         </aside>
       </section>
@@ -391,8 +298,7 @@ export default function Home() {
           font-size: 14px;
         }
 
-        .alert,
-        .success {
+        .alert {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -406,51 +312,6 @@ export default function Home() {
           border: 1px solid #f0b8b8;
           background: #fff1f1;
           color: #8a1f1f;
-        }
-
-        .success {
-          border: 1px solid #a7d8bd;
-          background: #eefaf2;
-          color: #14532d;
-        }
-
-        .success div {
-          display: grid;
-          gap: 4px;
-        }
-
-        .orderSummary {
-          display: grid;
-          align-items: stretch;
-        }
-
-        .orderSummaryHead {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-        }
-
-        .orderSummary ul {
-          display: grid;
-          gap: 6px;
-          margin: 12px 0 0;
-          padding: 12px 0 0;
-          border-top: 1px solid #cdebd7;
-          list-style: none;
-        }
-
-        .orderSummary li {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          font-size: 14px;
-        }
-
-        .orderSummary em {
-          color: #3f7a55;
-          font-style: normal;
         }
 
         .content {
@@ -625,25 +486,6 @@ export default function Home() {
           margin-top: 16px;
           padding-top: 16px;
           font-size: 18px;
-        }
-
-        .paymentChoice {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 8px;
-          margin-top: 16px;
-        }
-
-        .paymentChoice button {
-          min-height: 40px;
-          padding: 0 8px;
-          font-size: 13px;
-        }
-
-        .paymentChoice button.active {
-          border-color: #8b5e34;
-          background: #fff7ed;
-          color: #6f461f;
         }
 
         .checkout {

@@ -166,6 +166,27 @@ export class OrdersService {
     return enriched;
   }
 
+  async updatePaymentMethod(id: number, paymentMethod: 'cash' | 'midtrans') {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) return undefined;
+    if (order.paymentStatus === 'paid') {
+      throw new BadRequestException(`Order #${id} has already been paid`);
+    }
+    if (order.status === 'canceled') {
+      throw new BadRequestException(`Order #${id} has been canceled`);
+    }
+
+    order.paymentMethod = paymentMethod;
+    if (paymentMethod === 'cash') {
+      order.midtransTransactionStatus = undefined;
+    }
+
+    const updated = await this.orderRepository.save(order);
+    const enriched = await this.enrichOrder(updated);
+    this.ordersGateway.broadcastOrderUpdate(enriched);
+    return enriched;
+  }
+
   async cancel(id: number, reason?: string) {
     const order = await this.orderRepository.findOne({ where: { id } });
     if (!order) return undefined;

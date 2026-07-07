@@ -7,6 +7,7 @@ import { Roles } from '../auth/roles.decorator';
 import { isOrderStatus } from './order-status';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { OrderCorrectionDto } from './dto/order-correction.dto';
+import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
 
 @Controller('orders')
 export class OrdersController {
@@ -46,6 +47,14 @@ export class OrdersController {
   @Patch(':id/payment')
   async updatePayment(@Param('id') id: string, @Body() body: UpdatePaymentDto) {
     const order = await this.ordersService.updatePayment(Number(id), body.paidAmount);
+    if (!order) throw new BadRequestException('Order not found');
+    return order;
+  }
+
+  @Patch(':id/payment-method')
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  async updatePaymentMethod(@Param('id') id: string, @Body() body: UpdatePaymentMethodDto) {
+    const order = await this.ordersService.updatePaymentMethod(Number(id), body.paymentMethod);
     if (!order) throw new BadRequestException('Order not found');
     return order;
   }

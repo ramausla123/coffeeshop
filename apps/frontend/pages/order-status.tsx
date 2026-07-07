@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { apiUrl } from '../lib/api';
+import { connectWebSocket, subscribeToOrders, unsubscribeFromOrders } from '../lib/websocket';
 import type { Order } from '../types';
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -13,7 +14,6 @@ export default function OrderStatusPage() {
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
 
   const orderId = typeof router.query.orderId === 'string' ? router.query.orderId : '';
@@ -33,6 +33,29 @@ export default function OrderStatusPage() {
     loadOrder();
   }, [orderId]);
 
+  useEffect(() => {
+    if (!orderId || order?.paymentStatus === 'paid' || order?.status === 'canceled') return;
+
+    const timer = window.setInterval(() => {
+      loadOrder();
+    }, 10000);
+
+    return () => window.clearInterval(timer);
+  }, [order?.paymentStatus, order?.status, orderId]);
+
+  useEffect(() => {
+    if (!orderId) return;
+
+    connectWebSocket();
+    subscribeToOrders((event, data: Order) => {
+      if ((event === 'order:updated' || event === 'order:paid') && data?.id === Number(orderId)) {
+        setOrder(data);
+      }
+    });
+
+    return () => unsubscribeFromOrders();
+  }, [orderId]);
+
   async function loadOrder() {
     setLoading(true);
     setError('');
@@ -48,27 +71,20 @@ export default function OrderStatusPage() {
     }
   }
 
-  async function continuePayment() {
-    if (!order || paying) return;
-    setPaying(true);
-    setError('');
-    try {
-      const res = await fetch(apiUrl('/payments/midtrans/create'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order.id }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.redirectUrl) throw new Error(data?.message || 'Payment request failed');
-      window.location.href = data.redirectUrl;
-    } catch {
-      setError('Gagal membuka pembayaran. Silakan coba lagi atau bayar di kasir.');
-      setPaying(false);
+  function backToMenu() {
+    if (order?.paymentStatus === 'paid') {
+      window.localStorage.removeItem('coffee_checkout');
     }
+    router.push(table ? `/?table=${encodeURIComponent(table)}` : '/');
   }
 
-  function backToMenu() {
-    router.push(table ? `/?table=${encodeURIComponent(table)}` : '/');
+  function changePaymentMethod() {
+    const hasCheckoutDraft = typeof window !== 'undefined' && window.localStorage.getItem('coffee_checkout');
+    if (hasCheckoutDraft) {
+      router.push(`/checkout${table ? `?table=${encodeURIComponent(table)}` : ''}`);
+      return;
+    }
+    backToMenu();
   }
 
   return (
@@ -107,8 +123,8 @@ export default function OrderStatusPage() {
 
         <div className="actions">
           {order?.paymentStatus === 'pending' && (
-            <button type="button" className="primary" onClick={continuePayment} disabled={paying}>
-              {paying ? 'Membuka pembayaran...' : 'Lanjutkan / Ganti Metode Pembayaran'}
+            <button type="button" className="primary" onClick={changePaymentMethod}>
+              Ganti Metode Pembayaran
             </button>
           )}
           <button type="button" onClick={backToMenu}>
@@ -242,7 +258,7 @@ function getMessage(state: string, loading: boolean) {
   if (state === 'success') return 'Pembayaran berhasil. Pesanan Anda sudah masuk ke dapur dan akan segera diproses.';
   if (state === 'cash') return 'Tunjukkan nomor order ini ke kasir untuk pembayaran cash. Pesanan akan masuk dapur setelah kasir mengonfirmasi pembayaran.';
   if (state === 'error') return 'Pembayaran belum selesai atau gagal. Anda bisa mencoba pembayaran lagi atau hubungi kasir.';
-  return 'Pesanan belum masuk dapur. Lanjutkan pembayaran online, ganti metode pembayaran, atau bayar langsung di kasir.';
+  return 'Pesanan belum masuk dapur. Halaman ini akan memperbarui status otomatis setelah pembayaran dikonfirmasi.';
 }
 
 function formatOrderStatus(status: Order['status']) {
