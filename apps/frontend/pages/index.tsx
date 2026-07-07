@@ -19,6 +19,7 @@ export default function Home() {
   const [orderResult, setOrderResult] = useState<any>(null)
   const [loadingMenu, setLoadingMenu] = useState(true)
   const [placingOrder, setPlacingOrder] = useState(false)
+  const [redirectingPayment, setRedirectingPayment] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart])
@@ -88,7 +89,7 @@ export default function Home() {
   }
 
   async function placeOrder() {
-    if (cart.length === 0 || placingOrder) return
+    if (cart.length === 0 || placingOrder || redirectingPayment) return
 
     setPlacingOrder(true)
     setError(null)
@@ -114,8 +115,22 @@ export default function Home() {
 
       setOrderResult(data)
       setCart([])
+      setRedirectingPayment(true)
+
+      const paymentRes = await fetch(apiUrl('/payments/midtrans/create'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: data.id }),
+      })
+      const paymentData = await paymentRes.json()
+      if (!paymentRes.ok || !paymentData.redirectUrl) {
+        throw new Error(paymentData?.message || 'Payment request failed')
+      }
+
+      window.location.href = paymentData.redirectUrl
     } catch {
-      setError('Gagal membuat order. Coba ulang beberapa saat lagi.')
+      setError('Gagal membuat pembayaran. Silakan coba ulang atau hubungi kasir.')
+      setRedirectingPayment(false)
     } finally {
       setPlacingOrder(false)
     }
@@ -153,7 +168,7 @@ export default function Home() {
           <div className="orderSummaryHead">
             <div>
               <strong>Order #{orderResult.id} menunggu pembayaran</strong>
-              <span>Pesanan akan masuk dapur setelah pembayaran dikonfirmasi kasir.</span>
+              <span>{redirectingPayment ? 'Mengarahkan ke pembayaran...' : 'Pesanan akan masuk dapur setelah pembayaran berhasil.'}</span>
             </div>
             <strong>{currency.format(orderResult.total)}</strong>
           </div>
@@ -271,9 +286,9 @@ export default function Home() {
             type="button"
             className="checkout"
             onClick={placeOrder}
-            disabled={cart.length === 0 || placingOrder}
+            disabled={cart.length === 0 || placingOrder || redirectingPayment}
           >
-            {placingOrder ? 'Mengirim...' : 'Place Order'}
+            {redirectingPayment ? 'Membuka pembayaran...' : placingOrder ? 'Mengirim...' : 'Place Order'}
           </button>
         </aside>
       </section>

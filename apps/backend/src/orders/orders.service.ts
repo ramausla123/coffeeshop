@@ -52,6 +52,53 @@ export class OrdersService {
     return order ? this.enrichOrder(order) : undefined;
   }
 
+  async findRawById(id: number) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  async findByMidtransOrderId(midtransOrderId: string) {
+    return this.orderRepository.findOne({ where: { midtransOrderId } });
+  }
+
+  async attachMidtransPayment(id: number, midtransOrderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) return undefined;
+    order.paymentMethod = 'midtrans';
+    order.paymentReference = midtransOrderId;
+    order.midtransOrderId = midtransOrderId;
+    const updated = await this.orderRepository.save(order);
+    return this.enrichOrder(updated);
+  }
+
+  async confirmGatewayPayment(midtransOrderId: string, paidAmount: number, transactionStatus: string, paymentMethod?: string) {
+    const order = await this.findByMidtransOrderId(midtransOrderId);
+    if (!order) return undefined;
+    if (order.paymentStatus === 'paid') {
+      order.midtransTransactionStatus = transactionStatus;
+      const updated = await this.orderRepository.save(order);
+      return this.enrichOrder(updated);
+    }
+
+    order.paymentStatus = 'paid';
+    if (order.status === 'pending_payment') {
+      order.status = 'received';
+    }
+    order.paymentMethod = paymentMethod || order.paymentMethod || 'midtrans';
+    order.paymentReference = midtransOrderId;
+    order.midtransTransactionStatus = transactionStatus;
+    order.paidAmount = paidAmount;
+    order.paidAt = new Date();
+    const updated = await this.orderRepository.save(order);
+    const enriched = await this.enrichOrder(updated);
+
+    this.ordersGateway.broadcastPaymentUpdate(enriched);
+    if (updated.status === 'received') {
+      this.ordersGateway.broadcastNewOrder(enriched);
+    }
+
+    return enriched;
+  }
+
   async list() {
     const orders = await this.orderRepository.find({ order: { id: 'DESC' } });
     return Promise.all(orders.map((o) => this.enrichOrder(o)));

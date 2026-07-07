@@ -30,6 +30,10 @@ export type Order = {
   status: OrderStatus;
   total: number;
   paymentStatus?: 'pending' | 'paid' | 'refunded';
+  paymentMethod?: string;
+  paymentReference?: string;
+  midtransOrderId?: string;
+  midtransTransactionStatus?: string;
   paidAmount?: number;
   paidAt?: string;
   canceledAt?: string;

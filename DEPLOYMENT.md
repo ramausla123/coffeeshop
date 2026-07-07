@@ -27,6 +27,9 @@ DATABASE_URL=postgresql://postgres.your-project-ref:your-password@your-pooler-ho
 DB_SSL=true
 DB_MIGRATIONS_RUN=false
 JWT_SECRET=your-long-random-secret
+MIDTRANS_IS_PRODUCTION=false
+MIDTRANS_SERVER_KEY=your-midtrans-server-key
+MIDTRANS_CLIENT_KEY=your-midtrans-client-key
 DEFAULT_ADMIN_PASSWORD=your-admin-password
 DEFAULT_KITCHEN_PASSWORD=your-kitchen-password
 DEFAULT_CASHIER_PASSWORD=your-cashier-password
@@ -35,6 +38,18 @@ DEFAULT_CASHIER_PASSWORD=your-cashier-password
 Most platforms provide `PORT` automatically. If they do, do not override it.
 
 The backend serves HTTP and Socket.io on the same port. Use the backend base URL for both API and WebSocket clients.
+
+Set the Midtrans payment notification URL to:
+
+```text
+https://your-backend-domain/payments/midtrans/notification
+```
+
+For a quick browser check, open:
+
+```text
+https://your-backend-domain/payments/midtrans/health
+```
 
 ## Frontend
 

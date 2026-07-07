@@ -42,6 +42,18 @@ export class Order {
   @Column({ type: 'varchar', length: 20, default: 'pending' })
   paymentStatus!: 'pending' | 'paid' | 'refunded';
 
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  paymentMethod?: string;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  paymentReference?: string;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  midtransOrderId?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  midtransTransactionStatus?: string;
+
   @Column({ type: 'integer', nullable: true })
   paidAmount?: number;
 
