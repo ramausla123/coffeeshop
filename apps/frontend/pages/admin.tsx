@@ -21,6 +21,8 @@ const currency = new Intl.NumberFormat('id-ID', {
 const emptyForm = { name: '', price: 0, description: '', isAvailable: true };
 type OrderFilter = 'all' | OrderStatus;
 type DateFilter = 'today' | 'all';
+type PaymentFilter = 'all' | 'pending' | 'paid' | 'refunded';
+type MethodFilter = 'all' | 'cash' | 'midtrans' | 'qris' | 'bank_transfer' | 'credit_card' | 'other';
 
 const orderFilters: { value: OrderFilter; label: string }[] = [
   { value: 'all', label: 'Semua' },
@@ -35,6 +37,23 @@ const orderFilters: { value: OrderFilter; label: string }[] = [
 const dateFilters: { value: DateFilter; label: string }[] = [
   { value: 'today', label: 'Hari ini' },
   { value: 'all', label: 'Semua tanggal' },
+];
+
+const paymentFilters: { value: PaymentFilter; label: string }[] = [
+  { value: 'all', label: 'Semua bayar' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'refunded', label: 'Refunded' },
+];
+
+const methodFilters: { value: MethodFilter; label: string }[] = [
+  { value: 'all', label: 'Semua metode' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'midtrans', label: 'Midtrans' },
+  { value: 'qris', label: 'QRIS' },
+  { value: 'bank_transfer', label: 'VA/Transfer' },
+  { value: 'credit_card', label: 'Card' },
+  { value: 'other', label: 'Lainnya' },
 ];
 
 const dateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
@@ -55,14 +74,19 @@ export default function Admin() {
   const [realtimeReady, setRealtimeReady] = useState(false);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('today');
+  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('all');
+  const [methodFilter, setMethodFilter] = useState<MethodFilter>('all');
 
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       const matchesStatus = orderFilter === 'all' || order.status === orderFilter;
       const matchesDate = dateFilter === 'all' || isToday(order.createdAt);
-      return matchesStatus && matchesDate;
+      const matchesPayment = paymentFilter === 'all' || order.paymentStatus === paymentFilter;
+      const normalizedMethod = normalizePaymentMethod(order.paymentMethod);
+      const matchesMethod = methodFilter === 'all' || normalizedMethod === methodFilter;
+      return matchesStatus && matchesDate && matchesPayment && matchesMethod;
     });
-  }, [dateFilter, orderFilter, orders]);
+  }, [dateFilter, methodFilter, orderFilter, orders, paymentFilter]);
 
   const stats = useMemo(() => {
     const byStatus = filteredOrders.reduce(
@@ -483,6 +507,30 @@ export default function Admin() {
                   </button>
                 ))}
               </div>
+              <div className="filterGroup" aria-label="Filter pembayaran">
+                {paymentFilters.map((filter) => (
+                  <button
+                    type="button"
+                    key={filter.value}
+                    className={paymentFilter === filter.value ? 'active' : ''}
+                    onClick={() => setPaymentFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
+              <div className="filterGroup" aria-label="Filter metode pembayaran">
+                {methodFilters.map((filter) => (
+                  <button
+                    type="button"
+                    key={filter.value}
+                    className={methodFilter === filter.value ? 'active' : ''}
+                    onClick={() => setMethodFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -519,7 +567,12 @@ export default function Admin() {
                     <td>
                       <span className={`status ${order.status}`}>{formatOrderStatus(order.status)}</span>
                     </td>
-                    <td>{order.paymentStatus || 'pending'}</td>
+                    <td>
+                      <div className="paymentCell">
+                        <strong>{order.paymentStatus || 'pending'}</strong>
+                        <span>{formatPaymentMethod(order.paymentMethod)}</span>
+                      </div>
+                    </td>
                     <td>{currency.format(order.total)}</td>
                     <td>
                       {order.status !== 'canceled' && order.paymentStatus !== 'refunded' ? (
@@ -729,6 +782,16 @@ export default function Admin() {
           font-style: normal;
         }
 
+        .paymentCell {
+          display: grid;
+          gap: 3px;
+        }
+
+        .paymentCell span {
+          color: #667085;
+          font-size: 12px;
+        }
+
         .filterGroup button.active {
           border-color: #8b5e34;
           background: #8b5e34;
@@ -889,4 +952,30 @@ function formatOrderStatus(status: OrderStatus) {
     canceled: 'Batal',
   };
   return labels[status];
+}
+
+function normalizePaymentMethod(method?: string): MethodFilter {
+  if (!method) return 'other';
+  if (method === 'cash') return 'cash';
+  if (method === 'qris' || method === 'gopay' || method === 'shopeepay') return 'qris';
+  if (method === 'bank_transfer' || method === 'echannel' || method === 'permata_va' || method === 'bca_va') {
+    return 'bank_transfer';
+  }
+  if (method === 'credit_card') return 'credit_card';
+  if (method === 'midtrans') return 'midtrans';
+  return 'other';
+}
+
+function formatPaymentMethod(method?: string) {
+  const normalized = normalizePaymentMethod(method);
+  const labels: Record<MethodFilter, string> = {
+    all: 'Semua metode',
+    cash: 'Cash',
+    midtrans: 'Midtrans',
+    qris: 'QRIS',
+    bank_transfer: 'VA/Transfer',
+    credit_card: 'Card',
+    other: method || '-',
+  };
+  return labels[normalized];
 }

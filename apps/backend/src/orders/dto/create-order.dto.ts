@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsIn, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 
 export class CreateOrderItemDto {
   @IsInt()
@@ -19,6 +19,10 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   table?: string;
+
+  @IsOptional()
+  @IsIn(['cash', 'midtrans'])
+  paymentMethod?: 'cash' | 'midtrans';
 
   @IsArray()
   @ArrayMinSize(1)

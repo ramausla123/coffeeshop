@@ -97,6 +97,7 @@ export default function Home() {
 
     const body = {
       table: table.trim() || undefined,
+      paymentMethod: paymentChoice === 'cash' ? 'cash' : 'midtrans',
       items: cart.map((item) => ({
         menuId: item.menuId,
         quantity: item.qty,
@@ -118,6 +119,7 @@ export default function Home() {
       setCart([])
 
       if (paymentChoice === 'cash') {
+        router.push(`/order-status?orderId=${data.id}${table.trim() ? `&table=${encodeURIComponent(table.trim())}` : ''}&payment=cash`)
         return
       }
 

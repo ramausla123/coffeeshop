@@ -41,7 +41,7 @@ export class PaymentsService {
       throw new BadRequestException('Order has been canceled');
     }
 
-    const midtransOrderId = order.midtransOrderId || `coffee-${order.id}-${Date.now()}`;
+    const midtransOrderId = `coffee-${order.id}-${Date.now()}`;
     await this.ordersService.attachMidtransPayment(order.id, midtransOrderId);
 
     const snap = this.createSnapClient();
@@ -120,9 +120,9 @@ export class PaymentsService {
     if (table) params.set('table', table);
 
     return {
-      finish: `${frontendUrl}/payment-result?${params.toString()}`,
-      error: `${frontendUrl}/payment-result?${params.toString()}&payment=error`,
-      pending: `${frontendUrl}/payment-result?${params.toString()}&payment=pending`,
+      finish: `${frontendUrl}/order-status?${params.toString()}`,
+      error: `${frontendUrl}/order-status?${params.toString()}&payment=error`,
+      pending: `${frontendUrl}/order-status?${params.toString()}&payment=pending`,
     };
   }
 

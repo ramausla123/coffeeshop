@@ -37,6 +37,7 @@ export class OrdersService {
       items: order.items as any,
       status: 'pending_payment',
       total,
+      paymentMethod: order.paymentMethod,
     });
     const saved = await this.orderRepository.save(newOrder);
     const enriched = await this.enrichOrder(saved);
@@ -60,6 +61,15 @@ export class OrdersService {
     return this.orderRepository.findOne({ where: { midtransOrderId } });
   }
 
+  async findByMidtransOrderIdOrInternalId(midtransOrderId: string) {
+    const order = await this.findByMidtransOrderId(midtransOrderId);
+    if (order) return order;
+
+    const match = /^coffee-(\d+)-/.exec(midtransOrderId);
+    if (!match) return null;
+    return this.orderRepository.findOne({ where: { id: Number(match[1]) } });
+  }
+
   async attachMidtransPayment(id: number, midtransOrderId: string) {
     const order = await this.orderRepository.findOne({ where: { id } });
     if (!order) return undefined;
@@ -71,7 +81,7 @@ export class OrdersService {
   }
 
   async confirmGatewayPayment(midtransOrderId: string, paidAmount: number, transactionStatus: string, paymentMethod?: string) {
-    const order = await this.findByMidtransOrderId(midtransOrderId);
+    const order = await this.findByMidtransOrderIdOrInternalId(midtransOrderId);
     if (!order) return undefined;
     if (order.paymentStatus === 'paid') {
       order.midtransTransactionStatus = transactionStatus;
@@ -83,6 +93,7 @@ export class OrdersService {
     if (order.status === 'pending_payment') {
       order.status = 'received';
     }
+    order.paymentMethod = order.paymentMethod || 'cash';
     order.paymentMethod = paymentMethod || order.paymentMethod || 'midtrans';
     order.paymentReference = midtransOrderId;
     order.midtransTransactionStatus = transactionStatus;
