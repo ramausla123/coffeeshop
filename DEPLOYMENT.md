@@ -22,6 +22,7 @@ Environment variables:
 ```env
 NODE_ENV=production
 PORT=4000
+FRONTEND_URL=https://your-frontend-domain
 DB_TYPE=postgres
 DATABASE_URL=postgresql://postgres.your-project-ref:your-password@your-pooler-host.supabase.com:5432/postgres
 DB_SSL=true

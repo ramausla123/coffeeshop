@@ -45,7 +45,8 @@ export class PaymentsService {
     await this.ordersService.attachMidtransPayment(order.id, midtransOrderId);
 
     const snap = this.createSnapClient();
-    const transaction = await snap.createTransaction({
+    const callbacks = this.createRedirectCallbacks(order.id, order.table);
+    const parameter = {
       transaction_details: {
         order_id: midtransOrderId,
         gross_amount: order.total,
@@ -53,7 +54,9 @@ export class PaymentsService {
       customer_details: {
         first_name: order.table ? `Meja ${order.table}` : 'Coffee Shop Customer',
       },
-    }) as SnapTransactionResponse;
+      ...(callbacks ? { callbacks } : {}),
+    };
+    const transaction = await snap.createTransaction(parameter) as SnapTransactionResponse;
 
     return {
       orderId: order.id,
@@ -107,6 +110,20 @@ export class PaymentsService {
       serverKey,
       clientKey: this.config.get<string>('MIDTRANS_CLIENT_KEY') || '',
     });
+  }
+
+  private createRedirectCallbacks(orderId: number, table?: string) {
+    const frontendUrl = (this.config.get<string>('FRONTEND_URL') || '').replace(/\/+$/, '');
+    if (!frontendUrl) return undefined;
+
+    const params = new URLSearchParams({ orderId: String(orderId) });
+    if (table) params.set('table', table);
+
+    return {
+      finish: `${frontendUrl}/payment-result?${params.toString()}`,
+      error: `${frontendUrl}/payment-result?${params.toString()}&payment=error`,
+      pending: `${frontendUrl}/payment-result?${params.toString()}&payment=pending`,
+    };
   }
 
   private verifySignature(body: MidtransNotification) {

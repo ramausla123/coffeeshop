@@ -1014,6 +1014,102 @@ export default function Cashier() {
           font-weight: 800;
         }
 
+        .page {
+          padding: 22px 24px 28px;
+        }
+
+        .topbar {
+          margin-bottom: 20px;
+        }
+
+        .topbar h1 {
+          font-size: 28px;
+        }
+
+        .connection,
+        .actions button {
+          min-height: 36px;
+        }
+
+        .panel {
+          padding: 18px 20px;
+        }
+
+        .panelHead {
+          margin-bottom: 14px;
+        }
+
+        .orderList {
+          gap: 10px;
+        }
+
+        .orderItem {
+          align-items: center;
+          gap: 14px;
+          padding: 16px;
+        }
+
+        .orderInfo {
+          gap: 8px;
+        }
+
+        .orderInfo > strong {
+          font-size: 20px;
+          line-height: 1.1;
+        }
+
+        .paymentForm {
+          gap: 14px;
+        }
+
+        .orderDetail {
+          display: grid;
+          gap: 4px;
+        }
+
+        .paymentCalc {
+          display: grid;
+          gap: 10px;
+        }
+
+        .row {
+          align-items: center;
+          padding: 7px 0;
+        }
+
+        .orderItems h3 {
+          margin-bottom: 10px;
+        }
+
+        .orderItems td {
+          padding: 8px 0;
+        }
+
+        label {
+          gap: 7px;
+        }
+
+        input {
+          min-height: 52px;
+          font-size: 18px;
+        }
+
+        .payButton,
+        .cancelButton {
+          min-height: 46px;
+          width: 100%;
+        }
+
+        .paymentCalc .payButton + .cancelButton {
+          margin-top: -2px;
+        }
+
+        @media (min-width: 1025px) {
+          .content {
+            grid-template-columns: minmax(0, 1fr) 430px;
+          }
+        }
+
         @media (max-width: 1024px) {
           .content {
             grid-template-columns: 1fr;
