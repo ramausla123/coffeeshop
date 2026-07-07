@@ -5,7 +5,7 @@ let socket: Socket | null = null;
 const DEFAULT_WS_URL = 'http://localhost:4000';
 
 export function getWebSocketUrl() {
-  return process.env.NEXT_PUBLIC_WS_URL || DEFAULT_WS_URL;
+  return (process.env.NEXT_PUBLIC_WS_URL || DEFAULT_WS_URL).replace(/\/+$/, '');
 }
 
 export function connectWebSocket(url: string = getWebSocketUrl()) {
