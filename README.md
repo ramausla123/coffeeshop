@@ -29,7 +29,6 @@ JWT_SECRET=change-this-secret-to-a-long-random-string
 DEFAULT_ADMIN_PASSWORD=change-admin-password
 DEFAULT_KITCHEN_PASSWORD=change-kitchen-password
 DEFAULT_CASHIER_PASSWORD=change-cashier-password
-WS_PORT=4002
 ```
 
 TypeORM will auto-sync the schema while `NODE_ENV` is not `production`. For production, set `NODE_ENV=production`, keep `synchronize` disabled, and run migrations intentionally.
@@ -38,7 +37,7 @@ Optional frontend env:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
-NEXT_PUBLIC_WS_URL=http://localhost:4002
+NEXT_PUBLIC_WS_URL=http://localhost:4000
 ```
 
 ### 2. Install Dependencies
@@ -63,7 +62,7 @@ cd apps/backend
 npm run start:dev
 ```
 
-The backend also starts a Socket.io server for real-time order updates. By default it listens on port `4002`.
+The backend also serves Socket.io for real-time order updates on the same port as the API.
 
 ## Features
 

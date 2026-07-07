@@ -25,7 +25,6 @@ JWT_SECRET=change-this-secret-to-a-long-random-string
 DEFAULT_ADMIN_PASSWORD=change-admin-password
 DEFAULT_KITCHEN_PASSWORD=change-kitchen-password
 DEFAULT_CASHIER_PASSWORD=change-cashier-password
-WS_PORT=4002
 ```
 
 `DB_HOST` should be the database hostname, not the Supabase REST/API URL. The backend strips `https://` defensively, but the clean value should look like `db.your-project-ref.supabase.co`. If DNS cannot resolve the direct host, use the connection string or pooler host shown in Supabase Project Settings > Database.

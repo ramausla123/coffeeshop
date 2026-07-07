@@ -7,6 +7,10 @@
   ],
   "scripts": {
     "dev:frontend": "npm --workspace=coffee-frontend run dev",
-    "dev:backend": "npm --workspace=coffee-backend run start:dev"
+    "dev:backend": "npm --workspace=coffee-backend run start:dev",
+    "build:frontend": "npm --workspace=coffee-frontend run build",
+    "build:backend": "npm --workspace=coffee-backend run build",
+    "start:frontend": "npm --workspace=coffee-frontend run start",
+    "start:backend": "npm --workspace=coffee-backend run start"
   }
 }

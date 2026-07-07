@@ -10,10 +10,12 @@ async function bootstrap() {
   app.enableCors();
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  // Setup socket.io server
+  const port = Number(process.env.PORT || 4000);
+
+  // Attach Socket.io to the same HTTP server. Most deployment platforms expose
+  // one port per service, so HTTP and realtime traffic should share it.
   const ordersGateway = app.get(OrdersGateway);
-  const wsPort = Number(process.env.WS_PORT || 4002);
-  const server = new Server(wsPort, {
+  const server = new Server(app.getHttpServer(), {
     cors: {
       origin: '*',
       methods: ['GET', 'POST'],
@@ -21,9 +23,9 @@ async function bootstrap() {
   });
   ordersGateway.setServer(server);
 
-  await app.listen(4000);
-  console.log('Backend running on http://localhost:4000');
-  console.log(`WebSocket server running on ws://localhost:${wsPort}`);
+  await app.listen(port);
+  console.log(`Backend running on http://localhost:${port}`);
+  console.log(`WebSocket server attached to http://localhost:${port}`);
 }
 
 bootstrap();
