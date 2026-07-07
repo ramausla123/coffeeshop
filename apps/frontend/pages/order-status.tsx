@@ -97,28 +97,38 @@ export default function OrderStatusPage() {
         {error && <div className="alert">{error}</div>}
 
         {order && (
-          <div className="summary">
-            <div>
-              <span>Order</span>
+          <>
+            <div className="orderCallout">
+              <span>Nomor order</span>
               <strong>#{order.id}</strong>
+              {order.paymentStatus !== 'paid' && (
+                <p>Tunjukkan nomor ini ke kasir bila memilih pembayaran cash.</p>
+              )}
             </div>
-            <div>
-              <span>Meja</span>
-              <strong>{order.table || '-'}</strong>
+
+            <div className="summary">
+              <div>
+                <span>Meja</span>
+                <strong>{order.table || '-'}</strong>
+              </div>
+              <div>
+                <span>Total</span>
+                <strong>{currency.format(order.total)}</strong>
+              </div>
+              <div>
+                <span>Pembayaran</span>
+                <strong>{order.paymentStatus === 'paid' ? 'Lunas' : 'Menunggu'}</strong>
+              </div>
+              <div>
+                <span>Metode</span>
+                <strong>{formatPaymentMethod(order.paymentMethod)}</strong>
+              </div>
+              <div>
+                <span>Dapur</span>
+                <strong>{formatOrderStatus(order.status)}</strong>
+              </div>
             </div>
-            <div>
-              <span>Total</span>
-              <strong>{currency.format(order.total)}</strong>
-            </div>
-            <div>
-              <span>Pembayaran</span>
-              <strong>{order.paymentStatus === 'paid' ? 'Lunas' : 'Menunggu'}</strong>
-            </div>
-            <div>
-              <span>Dapur</span>
-              <strong>{formatOrderStatus(order.status)}</strong>
-            </div>
-          </div>
+          </>
         )}
 
         <div className="actions">
@@ -190,6 +200,38 @@ export default function OrderStatusPage() {
           color: #8a1f1f;
           padding: 10px 12px;
           margin-bottom: 14px;
+        }
+
+        .orderCallout {
+          display: grid;
+          justify-items: center;
+          gap: 4px;
+          border: 1px solid #f1d5b8;
+          border-radius: 8px;
+          background: #fff7ed;
+          padding: 18px;
+          margin-bottom: 14px;
+          text-align: center;
+        }
+
+        .orderCallout span {
+          color: #8b5e34;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+        }
+
+        .orderCallout strong {
+          color: #111827;
+          font-size: 44px;
+          line-height: 1;
+        }
+
+        .orderCallout p {
+          margin: 4px 0 0;
+          color: #667085;
+          font-size: 14px;
+          line-height: 1.4;
         }
 
         .summary {
@@ -271,4 +313,20 @@ function formatOrderStatus(status: Order['status']) {
     canceled: 'Batal',
   };
   return labels[status];
+}
+
+function formatPaymentMethod(method?: string) {
+  const labels: Record<string, string> = {
+    cash: 'Cash di Kasir',
+    midtrans: 'Online',
+    qris: 'QRIS',
+    gopay: 'GoPay QRIS',
+    shopeepay: 'ShopeePay QRIS',
+    bank_transfer: 'Virtual Account',
+    echannel: 'Mandiri Bill',
+    permata_va: 'Permata VA',
+    bca_va: 'BCA VA',
+    credit_card: 'Kartu',
+  };
+  return method ? labels[method] || method : '-';
 }

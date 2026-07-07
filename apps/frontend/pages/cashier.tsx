@@ -304,8 +304,13 @@ export default function Cashier() {
                   </div>
                   <strong>{currency.format(order.total)}</strong>
                 </div>
-                {order.status === 'pending_payment' && <span className="badge pending">Menunggu bayar</span>}
-                {order.paymentStatus === 'paid' && <span className="badge">Lunas</span>}
+                <div className="orderBadges">
+                  <span className={`methodBadge ${getPaymentMethodTone(order.paymentMethod)}`}>
+                    {formatPaymentMethod(order.paymentMethod)}
+                  </span>
+                  {order.status === 'pending_payment' && <span className="badge pending">Menunggu bayar</span>}
+                  {order.paymentStatus === 'paid' && <span className="badge">Lunas</span>}
+                </div>
               </article>
             ))}
           </div>
@@ -332,6 +337,12 @@ export default function Cashier() {
               <div className="row">
                 <span>Jumlah Item</span>
                 <strong>{selectedOrder.items.reduce((sum, i) => sum + i.quantity, 0)}</strong>
+              </div>
+              <div className="row">
+                <span>Metode</span>
+                <strong className={`methodText ${getPaymentMethodTone(selectedOrder.paymentMethod)}`}>
+                  {formatPaymentMethod(selectedOrder.paymentMethod)}
+                </strong>
               </div>
             </div>
 
@@ -601,6 +612,56 @@ export default function Cashier() {
           font-size: 12px;
           font-weight: 600;
           margin-left: 12px;
+        }
+
+        .orderBadges {
+          display: flex;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 8px;
+        }
+
+        .methodBadge {
+          border: 1px solid #d8dee4;
+          border-radius: 999px;
+          background: #fff;
+          color: #344054;
+          padding: 5px 9px;
+          font-size: 12px;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .methodBadge.cash,
+        .methodText.cash {
+          border-color: #f1d5b8;
+          background: #fff7ed;
+          color: #8b5e34;
+        }
+
+        .methodBadge.online,
+        .methodText.online {
+          border-color: #c7d7fe;
+          background: #eef4ff;
+          color: #3538cd;
+        }
+
+        .methodBadge.card,
+        .methodText.card {
+          border-color: #d9d6fe;
+          background: #f4f3ff;
+          color: #5925dc;
+        }
+
+        .methodText {
+          justify-self: end;
+          border: 1px solid #d8dee4;
+          border-radius: 999px;
+          background: #fff;
+          color: #344054;
+          padding: 4px 9px;
+          font-size: 13px;
         }
 
         .badge.pending {
@@ -965,6 +1026,10 @@ export default function Cashier() {
           white-space: nowrap;
         }
 
+        .orderBadges {
+          margin-left: auto;
+        }
+
         .paymentForm {
           position: sticky;
           top: 20px;
@@ -1146,8 +1211,39 @@ export default function Cashier() {
           .paymentAmounts {
             justify-content: flex-start;
           }
+
+          .orderItem {
+            grid-template-columns: 1fr;
+          }
+
+          .orderBadges {
+            justify-content: flex-start;
+          }
         }
       `}</style>
     </main>
   );
+}
+
+function formatPaymentMethod(method?: string) {
+  const labels: Record<string, string> = {
+    cash: 'Cash di Kasir',
+    midtrans: 'Online',
+    qris: 'QRIS',
+    gopay: 'GoPay QRIS',
+    shopeepay: 'ShopeePay QRIS',
+    bank_transfer: 'Virtual Account',
+    echannel: 'Mandiri Bill',
+    permata_va: 'Permata VA',
+    bca_va: 'BCA VA',
+    credit_card: 'Kartu',
+  };
+  return method ? labels[method] || method : '-';
+}
+
+function getPaymentMethodTone(method?: string) {
+  if (method === 'cash') return 'cash';
+  if (method === 'credit_card') return 'card';
+  if (method) return 'online';
+  return '';
 }
