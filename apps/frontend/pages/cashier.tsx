@@ -233,6 +233,9 @@ export default function Cashier() {
           <h1>Payment</h1>
         </div>
         <div className="actions">
+          <span className={`connection ${socketConnected ? 'online' : 'offline'}`}>
+            {socketConnected ? 'Realtime' : 'Sync cadangan'}
+          </span>
           <button type="button" onClick={fetchOrders} disabled={loading}>
             Refresh
           </button>
@@ -254,10 +257,10 @@ export default function Cashier() {
               <strong>Order #{paymentResult.id} dibayar</strong>
               <span>Waktu: {dateTimeFormatter.format(new Date(paymentResult.paidAt))}</span>
             </div>
-            <div>
+            <div className="paymentAmounts">
               <div>Total: {currency.format(paymentResult.total)}</div>
               <div>Dibayar: {currency.format(paymentResult.paidAmount)}</div>
-              <strong style={{ fontSize: 18, color: '#27ae60' }}>Kembalian: {currency.format(paymentResult.change)}</strong>
+              <strong>Kembalian: {currency.format(paymentResult.change)}</strong>
             </div>
           </div>
           <button onClick={() => setPaymentResult(null)}>Tutup</button>
@@ -266,7 +269,12 @@ export default function Cashier() {
 
       <section className="content">
         <div className="panel">
-          <h2>Order Belum Dibayar</h2>
+          <div className="panelHead">
+            <div>
+              <h2>Order Belum Dibayar</h2>
+              <span>{unpaidOrders.length} menunggu konfirmasi</span>
+            </div>
+          </div>
           {loading && <p className="muted">Memuat order...</p>}
 
           {!loading && unpaidOrders.length === 0 && (
@@ -294,7 +302,7 @@ export default function Cashier() {
                       Meja {order.table || '-'} • {dateTimeFormatter.format(new Date(order.createdAt || new Date()))}
                     </span>
                   </div>
-                  <strong style={{ fontSize: 16 }}>{currency.format(order.total)}</strong>
+                  <strong>{currency.format(order.total)}</strong>
                 </div>
                 {order.status === 'pending_payment' && <span className="badge pending">Menunggu bayar</span>}
                 {order.paymentStatus === 'paid' && <span className="badge">Lunas</span>}
@@ -305,7 +313,12 @@ export default function Cashier() {
 
         {selectedOrder && (
           <div className="panel paymentForm">
-            <h2>Detail Pembayaran</h2>
+            <div className="panelHead">
+              <div>
+                <h2>Detail Pembayaran</h2>
+                <span>Order #{selectedOrder.id}</span>
+              </div>
+            </div>
 
             <div className="orderDetail">
               <div className="row">
@@ -716,6 +729,327 @@ export default function Cashier() {
         .cancelButton:disabled {
           opacity: 0.5;
           cursor: not-allowed;
+        }
+
+        .page {
+          display: block;
+          max-width: none;
+          min-height: 100%;
+          margin: 0;
+          background: #f6f7f9;
+          color: #111827;
+          padding: 24px;
+        }
+
+        .topbar {
+          max-width: 1180px;
+          margin: 0 auto 18px;
+          gap: 18px;
+          border-bottom: 0;
+          background: transparent;
+          padding: 0;
+        }
+
+        .topbar p {
+          margin: 0 0 4px;
+          font-weight: 800;
+          letter-spacing: 0;
+        }
+
+        .topbar h1 {
+          font-size: 30px;
+          line-height: 1.1;
+        }
+
+        .actions {
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+
+        .connection {
+          display: inline-flex;
+          align-items: center;
+          min-height: 34px;
+          border: 1px solid #d8dee4;
+          border-radius: 8px;
+          background: #fff;
+          padding: 0 10px;
+          color: #667085;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .connection.online {
+          border-color: #b7e4c7;
+          color: #16803c;
+        }
+
+        .connection.offline {
+          border-color: #f2c5a8;
+          color: #a24c16;
+        }
+
+        .actions button {
+          min-height: 34px;
+          border-radius: 8px;
+          padding: 0 14px;
+          font: inherit;
+          font-weight: 700;
+        }
+
+        .alert {
+          max-width: 1180px;
+          margin: 0 auto 14px;
+          border: 1px solid #f0b8b8;
+          border-radius: 8px;
+          background: #fff1f1;
+          color: #8a1f1f;
+          padding: 12px 14px;
+        }
+
+        .content {
+          grid-template-columns: minmax(0, 1fr) 420px;
+          align-items: start;
+          max-width: 1180px;
+          margin: 0 auto;
+          gap: 18px;
+          padding: 0;
+          overflow: visible;
+        }
+
+        .panel {
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+        }
+
+        .panelHead {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .panel h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 800;
+        }
+
+        .panelHead span {
+          display: inline-block;
+          margin-top: 4px;
+          color: #667085;
+          font-size: 13px;
+        }
+
+        .empty {
+          min-height: 180px;
+          place-items: center;
+          border: 1px dashed #cfd8e3;
+          border-radius: 8px;
+          padding: 28px 20px;
+          color: #667085;
+        }
+
+        .empty strong {
+          color: #344054;
+          font-weight: 800;
+        }
+
+        .success {
+          max-width: 1180px;
+          margin: 0 auto 16px;
+          border-color: #bbf7d0;
+          background: #f0fdf4;
+          padding: 14px 16px;
+        }
+
+        .paymentSummary {
+          gap: 16px;
+        }
+
+        .paymentHead {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: center;
+          gap: 24px;
+        }
+
+        .paymentHead > div {
+          margin-bottom: 0;
+        }
+
+        .paymentHead > div:first-child {
+          display: grid;
+          gap: 4px;
+        }
+
+        .paymentHead strong {
+          color: #15803d;
+        }
+
+        .paymentHead span,
+        .paymentAmounts {
+          color: #475467;
+          font-size: 14px;
+        }
+
+        .paymentAmounts {
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+          gap: 12px;
+        }
+
+        .paymentAmounts strong {
+          color: #15803d;
+          font-size: 16px;
+        }
+
+        .success button {
+          min-height: 34px;
+          border-radius: 8px;
+          padding: 0 14px;
+          font: inherit;
+          font-weight: 800;
+        }
+
+        .orderList {
+          display: grid;
+        }
+
+        .orderItem {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          align-items: start;
+          gap: 10px;
+          border-color: #e5e7eb;
+          border-radius: 8px;
+          padding: 14px;
+          background: #fff;
+        }
+
+        .orderItem:hover {
+          background: #fffaf5;
+        }
+
+        .orderItem.active {
+          background: #fff7ed;
+          box-shadow: 0 0 0 3px rgba(139, 94, 52, 0.1);
+        }
+
+        .orderInfo {
+          display: grid;
+          align-items: start;
+          gap: 10px;
+        }
+
+        .orderInfo div span {
+          color: #667085;
+          font-size: 13px;
+        }
+
+        .orderInfo > strong {
+          font-size: 18px;
+        }
+
+        .badge {
+          align-self: start;
+          border-radius: 999px;
+          padding: 5px 9px;
+          background: #16a34a;
+          font-weight: 800;
+          white-space: nowrap;
+        }
+
+        .paymentForm {
+          position: sticky;
+          top: 20px;
+          display: grid;
+        }
+
+        .orderDetail,
+        .orderItems,
+        .paymentCalc {
+          border: 1px solid #eef2f6;
+          border-radius: 8px;
+          background: #f8fafc;
+          padding: 14px;
+        }
+
+        .row.total {
+          font-size: 18px;
+          border-color: #d8dee4;
+        }
+
+        .orderItems table {
+          border-collapse: collapse;
+        }
+
+        label {
+          display: grid;
+          font-weight: 800;
+        }
+
+        input {
+          min-height: 46px;
+          border-radius: 8px;
+          font-weight: 800;
+        }
+
+        .payButton {
+          min-height: 46px;
+          border-radius: 8px;
+          background: #16a34a;
+          font-weight: 800;
+        }
+
+        .cancelButton {
+          min-height: 42px;
+          border-radius: 8px;
+          color: #b42318;
+          font-weight: 800;
+        }
+
+        @media (max-width: 1024px) {
+          .content {
+            grid-template-columns: 1fr;
+          }
+
+          .paymentForm {
+            position: static;
+          }
+        }
+
+        @media (max-width: 680px) {
+          .page {
+            padding: 18px 14px;
+          }
+
+          .topbar,
+          .paymentSummary {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .paymentHead {
+            grid-template-columns: 1fr;
+          }
+
+          .actions {
+            justify-content: flex-start;
+          }
+
+          .actions button {
+            flex: 1;
+          }
+
+          .paymentAmounts {
+            justify-content: flex-start;
+          }
         }
       `}</style>
     </main>
