@@ -37,10 +37,10 @@ export function getSocket(): Socket | null {
   return socket;
 }
 
-export function subscribeToOrders(callback: (event: string, data: any) => void) {
+export function subscribeToOrders(callback: (event: string, data: any) => void, room = 'orders') {
   if (!socket) return;
 
-  socket.emit('subscribe-orders', { room: 'orders' });
+  socket.emit('subscribe-orders', { room });
 
   socket.on('order:new', (order: any) => callback('order:new', order));
   socket.on('order:updated', (order: any) => callback('order:updated', order));
@@ -48,9 +48,9 @@ export function subscribeToOrders(callback: (event: string, data: any) => void) 
   socket.on('orders:refresh', (orders: any) => callback('orders:refresh', orders));
 }
 
-export function unsubscribeFromOrders() {
+export function unsubscribeFromOrders(room = 'orders') {
   if (!socket) return;
-  socket.emit('unsubscribe-orders', { room: 'orders' });
+  socket.emit('unsubscribe-orders', { room });
   socket.off('order:new');
   socket.off('order:updated');
   socket.off('order:paid');

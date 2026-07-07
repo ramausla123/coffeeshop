@@ -36,17 +36,20 @@ export class OrdersGateway {
     });
   }
 
-  // Broadcast new order to all connected clients
+  // Broadcast paid orders to the kitchen queue.
   broadcastNewOrder(order: Order) {
     if (!this.io) return;
-    this.io.to('orders').emit('order:new', order);
-    this.logger.log(`Broadcasted new order #${order.id}`);
+    this.io.to('kitchen').emit('order:new', order);
+    this.logger.log(`Broadcasted kitchen order #${order.id}`);
   }
 
   // Broadcast order status update
   broadcastOrderUpdate(order: Order) {
     if (!this.io) return;
     this.io.to('orders').emit('order:updated', order);
+    if (order.paymentStatus === 'paid') {
+      this.io.to('kitchen').emit('order:updated', order);
+    }
     this.logger.log(`Broadcasted order update #${order.id}`);
   }
 
@@ -61,5 +64,6 @@ export class OrdersGateway {
   broadcastAllOrders(orders: Order[]) {
     if (!this.io) return;
     this.io.to('orders').emit('orders:refresh', orders);
+    this.io.to('kitchen').emit('orders:refresh', orders.filter((order) => order.paymentStatus === 'paid'));
   }
 }

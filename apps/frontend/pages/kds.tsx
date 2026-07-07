@@ -166,7 +166,7 @@ export default function KDS() {
               setError(null)
               setOrders(data.filter(isKitchenOrder));
             }
-          });
+          }, 'kitchen');
         }
       } catch {
         clearToken();
@@ -178,7 +178,7 @@ export default function KDS() {
 
     return () => {
       mounted = false;
-      unsubscribeFromOrders();
+      unsubscribeFromOrders('kitchen');
     };
   }, []);
 
