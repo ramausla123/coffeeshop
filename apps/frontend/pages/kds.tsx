@@ -4,7 +4,14 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
-import { connectWebSocket, getSocket, subscribeToOrders, unsubscribeFromOrders } from '../lib/websocket';
+import {
+  connectWebSocket,
+  getSocket,
+  isWebSocketConnected,
+  onWebSocketStatusChange,
+  subscribeToOrders,
+  unsubscribeFromOrders,
+} from '../lib/websocket';
 import type { Order } from '../types';
 
 const statusFlow = ['received', 'preparing', 'ready', 'served'] as const;
@@ -57,6 +64,8 @@ export default function KDS() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [realtimeReady, setRealtimeReady] = useState(false);
   const initialized = useRef(false);
   const knownOrderIds = useRef<Set<number>>(new Set());
 
@@ -118,6 +127,7 @@ export default function KDS() {
 
   useEffect(() => {
     let mounted = true;
+    let cleanupSocketStatus: () => void = () => {};
 
     async function startKds() {
       try {
@@ -136,6 +146,9 @@ export default function KDS() {
         // Connect WebSocket
         connectWebSocket();
         const socket = getSocket();
+        setSocketConnected(isWebSocketConnected());
+        cleanupSocketStatus = onWebSocketStatusChange(setSocketConnected);
+        setRealtimeReady(true);
 
         if (socket) {
           subscribeToOrders((event: string, data: any) => {
@@ -179,8 +192,19 @@ export default function KDS() {
     return () => {
       mounted = false;
       unsubscribeFromOrders('kitchen');
+      cleanupSocketStatus();
     };
   }, []);
+
+  useEffect(() => {
+    if (!realtimeReady || socketConnected) return;
+
+    const timer = window.setInterval(() => {
+      fetchOrders();
+    }, 45000);
+
+    return () => window.clearInterval(timer);
+  }, [realtimeReady, socketConnected]);
 
   async function nextStatus(order: Order) {
     const idx = statusFlow.indexOf(order.status as (typeof statusFlow)[number]);

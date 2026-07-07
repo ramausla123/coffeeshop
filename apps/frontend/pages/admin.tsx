@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
-import { connectWebSocket, getSocket, subscribeToOrders, unsubscribeFromOrders } from '../lib/websocket';
+import {
+  connectWebSocket,
+  getSocket,
+  isWebSocketConnected,
+  onWebSocketStatusChange,
+  subscribeToOrders,
+  unsubscribeFromOrders,
+} from '../lib/websocket';
 import type { MenuItem, Order, OrderStatus } from '../types';
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -44,6 +51,8 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [realtimeReady, setRealtimeReady] = useState(false);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>('all');
   const [dateFilter, setDateFilter] = useState<DateFilter>('today');
 
@@ -75,6 +84,7 @@ export default function Admin() {
 
   useEffect(() => {
     let mounted = true;
+    let cleanupSocketStatus: () => void = () => {};
 
     async function initAdmin() {
       try {
@@ -103,6 +113,9 @@ export default function Admin() {
         // Connect WebSocket
         connectWebSocket();
         const socket = getSocket();
+        setSocketConnected(isWebSocketConnected());
+        cleanupSocketStatus = onWebSocketStatusChange(setSocketConnected);
+        setRealtimeReady(true);
 
         if (socket) {
           subscribeToOrders((event: string, data: any) => {
@@ -112,11 +125,15 @@ export default function Admin() {
               setOrders((prev) => [data, ...prev]);
             } else if (event === 'order:updated') {
               setOrders((prev) =>
-                prev.map((o) => (o.id === data.id ? data : o))
+                prev.some((o) => o.id === data.id)
+                  ? prev.map((o) => (o.id === data.id ? data : o))
+                  : [data, ...prev]
               );
             } else if (event === 'order:paid') {
               setOrders((prev) =>
-                prev.map((o) => (o.id === data.id ? data : o))
+                prev.some((o) => o.id === data.id)
+                  ? prev.map((o) => (o.id === data.id ? data : o))
+                  : [data, ...prev]
               );
             } else if (event === 'orders:refresh') {
               setOrders(data);
@@ -134,8 +151,19 @@ export default function Admin() {
     return () => {
       mounted = false;
       unsubscribeFromOrders();
+      cleanupSocketStatus();
     };
   }, []);
+
+  useEffect(() => {
+    if (!realtimeReady || socketConnected) return;
+
+    const timer = window.setInterval(() => {
+      fetchData();
+    }, 45000);
+
+    return () => window.clearInterval(timer);
+  }, [realtimeReady, socketConnected]);
 
   async function fetchData() {
     setLoading(true);

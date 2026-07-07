@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { authHeaders, clearToken, fetchProfile, getToken } from '../lib/auth';
 import { apiUrl } from '../lib/api';
-import { connectWebSocket, getSocket, subscribeToOrders, unsubscribeFromOrders } from '../lib/websocket';
+import {
+  connectWebSocket,
+  getSocket,
+  isWebSocketConnected,
+  onWebSocketStatusChange,
+  subscribeToOrders,
+  unsubscribeFromOrders,
+} from '../lib/websocket';
 import type { Order } from '../types';
 
 const currency = new Intl.NumberFormat('id-ID', {
@@ -22,6 +29,8 @@ export default function Cashier() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const [realtimeReady, setRealtimeReady] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [paidAmount, setPaidAmount] = useState<number>(0);
   const [paymentResult, setPaymentResult] = useState<any>(null);
@@ -42,6 +51,7 @@ export default function Cashier() {
 
   useEffect(() => {
     let mounted = true;
+    let cleanupSocketStatus: () => void = () => {};
 
     async function initCashier() {
       try {
@@ -65,6 +75,9 @@ export default function Cashier() {
         // Connect WebSocket
         connectWebSocket();
         const socket = getSocket();
+        setSocketConnected(isWebSocketConnected());
+        cleanupSocketStatus = onWebSocketStatusChange(setSocketConnected);
+        setRealtimeReady(true);
 
         // Ensure we always have latest orders when we receive websocket updates
         if (socket) {
@@ -94,8 +107,19 @@ export default function Cashier() {
     return () => {
       mounted = false;
       unsubscribeFromOrders();
+      cleanupSocketStatus();
     };
   }, []);
+
+  useEffect(() => {
+    if (!realtimeReady || socketConnected) return;
+
+    const timer = window.setInterval(() => {
+      fetchOrders();
+    }, 45000);
+
+    return () => window.clearInterval(timer);
+  }, [realtimeReady, socketConnected]);
 
   async function fetchOrders() {
     setLoading(true);

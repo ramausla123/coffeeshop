@@ -37,6 +37,27 @@ export function getSocket(): Socket | null {
   return socket;
 }
 
+export function isWebSocketConnected() {
+  return socket?.connected === true;
+}
+
+export function onWebSocketStatusChange(callback: (connected: boolean) => void): () => void {
+  if (!socket) return () => {};
+
+  const handleConnect = () => callback(true);
+  const handleDisconnect = () => callback(false);
+
+  socket.on('connect', handleConnect);
+  socket.on('disconnect', handleDisconnect);
+  socket.on('connect_error', handleDisconnect);
+
+  return () => {
+    socket?.off('connect', handleConnect);
+    socket?.off('disconnect', handleDisconnect);
+    socket?.off('connect_error', handleDisconnect);
+  };
+}
+
 export function subscribeToOrders(callback: (event: string, data: any) => void, room = 'orders') {
   if (!socket) return;
 
