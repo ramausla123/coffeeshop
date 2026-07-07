@@ -20,6 +20,7 @@ export default function Home() {
   const [loadingMenu, setLoadingMenu] = useState(true)
   const [placingOrder, setPlacingOrder] = useState(false)
   const [redirectingPayment, setRedirectingPayment] = useState(false)
+  const [paymentChoice, setPaymentChoice] = useState<'online' | 'cash'>('online')
   const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart])
@@ -115,6 +116,11 @@ export default function Home() {
 
       setOrderResult(data)
       setCart([])
+
+      if (paymentChoice === 'cash') {
+        return
+      }
+
       setRedirectingPayment(true)
 
       const paymentRes = await fetch(apiUrl('/payments/midtrans/create'), {
@@ -168,7 +174,13 @@ export default function Home() {
           <div className="orderSummaryHead">
             <div>
               <strong>Order #{orderResult.id} menunggu pembayaran</strong>
-              <span>{redirectingPayment ? 'Mengarahkan ke pembayaran...' : 'Pesanan akan masuk dapur setelah pembayaran berhasil.'}</span>
+              <span>
+                {redirectingPayment
+                  ? 'Mengarahkan ke pembayaran...'
+                  : paymentChoice === 'cash'
+                    ? 'Silakan bayar cash di kasir. Pesanan akan masuk dapur setelah kasir mengonfirmasi pembayaran.'
+                    : 'Pesanan akan masuk dapur setelah pembayaran berhasil.'}
+              </span>
             </div>
             <strong>{currency.format(orderResult.total)}</strong>
           </div>
@@ -282,13 +294,36 @@ export default function Home() {
             <strong>{currency.format(total)}</strong>
           </div>
 
+          <div className="paymentChoice" aria-label="Pilihan pembayaran">
+            <button
+              type="button"
+              className={paymentChoice === 'online' ? 'active' : ''}
+              onClick={() => setPaymentChoice('online')}
+            >
+              Bayar Online
+            </button>
+            <button
+              type="button"
+              className={paymentChoice === 'cash' ? 'active' : ''}
+              onClick={() => setPaymentChoice('cash')}
+            >
+              Cash di Kasir
+            </button>
+          </div>
+
           <button
             type="button"
             className="checkout"
             onClick={placeOrder}
             disabled={cart.length === 0 || placingOrder || redirectingPayment}
           >
-            {redirectingPayment ? 'Membuka pembayaran...' : placingOrder ? 'Mengirim...' : 'Place Order'}
+            {redirectingPayment
+              ? 'Membuka pembayaran...'
+              : placingOrder
+                ? 'Mengirim...'
+                : paymentChoice === 'cash'
+                  ? 'Buat Order Cash'
+                  : 'Bayar Sekarang'}
           </button>
         </aside>
       </section>
@@ -588,6 +623,25 @@ export default function Home() {
           margin-top: 16px;
           padding-top: 16px;
           font-size: 18px;
+        }
+
+        .paymentChoice {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: 16px;
+        }
+
+        .paymentChoice button {
+          min-height: 40px;
+          padding: 0 8px;
+          font-size: 13px;
+        }
+
+        .paymentChoice button.active {
+          border-color: #8b5e34;
+          background: #fff7ed;
+          color: #6f461f;
         }
 
         .checkout {
