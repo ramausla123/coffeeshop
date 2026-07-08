@@ -6,6 +6,11 @@ import { Server } from 'socket.io';
 import { OrdersGateway } from './orders/orders.gateway';
 import type { Request, Response, NextFunction } from 'express';
 
+function reportErrorToMonitoring(error: unknown, context: string) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error(`[monitoring] ${context}: ${message}`);
+}
+
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 
 @Catch()
@@ -20,6 +25,7 @@ class GlobalExceptionFilter implements ExceptionFilter {
     const message = exception instanceof HttpException ? exception.getResponse() : 'Internal server error';
 
     if (status >= 500) {
+      reportErrorToMonitoring(exception, `Unhandled exception on ${request.method} ${request.url}`);
       this.logger.error(
         `Unhandled exception on ${request.method} ${request.url}`,
         exception instanceof Error ? exception.stack : String(exception),
