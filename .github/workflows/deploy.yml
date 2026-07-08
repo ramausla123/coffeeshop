@@ -4,10 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
-    environment: production
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,30 +27,37 @@ jobs:
 
       - name: Validate deployment secrets
         run: |
-          for var in DEPLOY_HOST DEPLOY_USER DEPLOY_KEY DEPLOY_PATH; do
+          for var in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID RENDER_API_KEY RENDER_SERVICE_ID; do
             if [ -z "${!var}" ]; then
               echo "$var is missing"
               exit 1
             fi
           done
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
 
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.1.0
+  deploy-frontend:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy frontend to Vercel
+        uses: amondnet/vercel-action@v25
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.DEPLOY_PATH }}
-            git pull origin main
-            npm ci
-            npm --workspace=coffee-backend run build
-            npm --workspace=coffee-frontend run build
-            pm2 restart coffee-backend || pm2 start "npm --workspace=coffee-backend run start" --name coffee-backend
-            pm2 restart coffee-frontend || pm2 start "npm --workspace=coffee-frontend run start" --name coffee-frontend
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+
+  deploy-backend:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json"
