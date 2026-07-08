@@ -9,6 +9,10 @@ import type { Request, Response, NextFunction } from 'express';
 function reportErrorToMonitoring(error: unknown, context: string) {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[monitoring] ${context}: ${message}`);
+
+  if (process.env.SENTRY_DSN) {
+    console.error(`[monitoring] Sentry DSN configured for ${context}`);
+  }
 }
 
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();

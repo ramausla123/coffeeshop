@@ -11,6 +11,16 @@ jobs:
   smoke-test:
     runs-on: ubuntu-latest
 
+    env:
+      NODE_ENV: test
+      PORT: 4000
+      JWT_SECRET: test-secret
+      DEFAULT_ADMIN_PASSWORD: admin-test
+      DEFAULT_KITCHEN_PASSWORD: kitchen-test
+      DEFAULT_CASHIER_PASSWORD: cashier-test
+      DB_TYPE: sqlite
+      DB_PATH: ./coffee-test.db
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,6 +40,28 @@ jobs:
       - name: Build frontend
         run: npm --workspace=coffee-frontend run build
 
-      - name: Smoke test backend health
+      - name: Start backend
         run: |
-          node -e "const http=require('http'); const req=http.get('http://127.0.0.1:4000/health', res=>{console.log('status',res.statusCode); process.exit(res.statusCode===200?0:1)}); req.on('error', err=>{console.error(err); process.exit(1)});"
+          npm --workspace=coffee-backend run start > /tmp/backend.log 2>&1 &
+          echo $! > /tmp/backend.pid
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4000/health >/tmp/health.json 2>/dev/null; then
+              echo "Backend is healthy"
+              cat /tmp/health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not become healthy"
+          cat /tmp/backend.log
+          exit 1
+
+      - name: Stop backend
+        if: always()
+        run: |
+          if [ -f /tmp/backend.pid ]; then
+            kill $(cat /tmp/backend.pid) || true
+          fi
