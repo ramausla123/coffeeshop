@@ -4,6 +4,13 @@ import { apiUrl } from '../lib/api'
 import type { MenuItem } from '../types'
 
 type CartItem = { id: number; menuId: number; name: string; price: number; qty: number; note: string }
+type MenuCategory = 'minuman' | 'makanan' | 'snack'
+
+const menuCategories: Array<{ value: MenuCategory; label: string }> = [
+  { value: 'minuman', label: 'Minuman' },
+  { value: 'makanan', label: 'Makanan' },
+  { value: 'snack', label: 'Snack' },
+]
 
 const currency = new Intl.NumberFormat('id-ID', {
   style: 'currency',
@@ -20,6 +27,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart])
+  const groupedMenu = useMemo(() => {
+    return menuCategories.map((category) => ({
+      ...category,
+      items: menu.filter((item) => (item.category || 'minuman') === category.value),
+    }))
+  }, [menu])
 
   useEffect(() => {
     fetchMenu()
@@ -149,28 +162,37 @@ export default function Home() {
             </div>
           )}
 
-          <div className="menuGrid">
-            {menu.map((item) => {
-              const soldOut = item.isAvailable === false
+          <div className="menuGroups">
+            {groupedMenu.map((group) => (
+              group.items.length > 0 && (
+                <section className="menuGroup" key={group.value}>
+                  <h3>{group.label}</h3>
+                  <div className="menuGrid">
+                    {group.items.map((item) => {
+                      const soldOut = item.isAvailable === false
 
-              return (
-              <article className={`menuItem ${soldOut ? 'soldOut' : ''}`} key={item.id}>
-                <div>
-                  <div className="menuTitle">
-                    <h3>{item.name}</h3>
-                    {soldOut && <span>Habis</span>}
+                      return (
+                        <article className={`menuItem ${soldOut ? 'soldOut' : ''}`} key={item.id}>
+                          <div>
+                            <div className="menuTitle">
+                              <h4>{item.name}</h4>
+                              {soldOut && <span>Habis</span>}
+                            </div>
+                            {item.description && <p>{item.description}</p>}
+                          </div>
+                          <div className="menuFooter">
+                            <strong>{currency.format(item.price)}</strong>
+                            <button type="button" onClick={() => addToCart(item)} disabled={soldOut}>
+                              {soldOut ? 'Kosong' : 'Tambah'}
+                            </button>
+                          </div>
+                        </article>
+                      )
+                    })}
                   </div>
-                  {item.description && <p>{item.description}</p>}
-                </div>
-                <div className="menuFooter">
-                  <strong>{currency.format(item.price)}</strong>
-                  <button type="button" onClick={() => addToCart(item)} disabled={soldOut}>
-                    {soldOut ? 'Kosong' : 'Tambah'}
-                  </button>
-                </div>
-              </article>
+                </section>
               )
-            })}
+            ))}
           </div>
         </div>
 
@@ -264,6 +286,7 @@ export default function Home() {
         h1,
         h2,
         h3,
+        h4,
         p {
           margin: 0;
         }
@@ -342,6 +365,23 @@ export default function Home() {
           margin-bottom: 16px;
         }
 
+        .menuGroups {
+          display: grid;
+          gap: 24px;
+        }
+
+        .menuGroup {
+          display: grid;
+          gap: 12px;
+        }
+
+        .menuGroup > h3 {
+          border-bottom: 1px solid #eef0f2;
+          padding-bottom: 8px;
+          color: #111827;
+          font-size: 18px;
+        }
+
         .menuGrid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -379,7 +419,7 @@ export default function Home() {
           white-space: nowrap;
         }
 
-        .menuItem h3 {
+        .menuItem h4 {
           margin-bottom: 8px;
           font-size: 17px;
         }

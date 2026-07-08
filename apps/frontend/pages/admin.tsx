@@ -18,7 +18,8 @@ const currency = new Intl.NumberFormat('id-ID', {
   maximumFractionDigits: 0,
 });
 
-const emptyForm = { name: '', price: 0, description: '', isAvailable: true };
+const emptyForm = { name: '', price: 0, category: 'minuman' as MenuCategory, description: '', isAvailable: true };
+type MenuCategory = 'makanan' | 'minuman' | 'snack';
 type OrderFilter = 'all' | OrderStatus;
 type DateFilter = 'today' | 'all';
 type PaymentFilter = 'all' | 'pending' | 'paid' | 'refunded';
@@ -277,6 +278,7 @@ export default function Admin() {
     setFormData({
       name: item.name,
       price: item.price,
+      category: item.category || 'minuman',
       description: item.description || '',
       isAvailable: item.isAvailable !== false,
     });
@@ -405,6 +407,15 @@ export default function Admin() {
               value={formData.price || ''}
               onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
             />
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value as MenuCategory })}
+              aria-label="Kategori menu"
+            >
+              <option value="minuman">Minuman</option>
+              <option value="makanan">Makanan</option>
+              <option value="snack">Snack</option>
+            </select>
             <input
               type="text"
               placeholder="Deskripsi"
@@ -434,6 +445,7 @@ export default function Admin() {
               <thead>
                 <tr>
                   <th>Nama</th>
+                  <th>Kategori</th>
                   <th>Harga</th>
                   <th>Deskripsi</th>
                   <th>Status</th>
@@ -444,6 +456,7 @@ export default function Admin() {
                 {menu.map((item) => (
                   <tr key={item.id}>
                     <td>{item.name}</td>
+                    <td>{formatMenuCategory(item.category)}</td>
                     <td>{currency.format(item.price)}</td>
                     <td>{item.description || '-'}</td>
                     <td>
@@ -707,7 +720,7 @@ export default function Admin() {
 
         .menuForm {
           display: grid;
-          grid-template-columns: minmax(160px, 1fr) 130px minmax(180px, 1.4fr) auto auto auto;
+          grid-template-columns: minmax(150px, 1fr) 120px 140px minmax(180px, 1.4fr) auto auto auto;
           gap: 10px;
           margin: 16px 0;
         }
@@ -729,12 +742,14 @@ export default function Admin() {
           padding: 0;
         }
 
-        input {
+        input,
+        select {
           min-height: 40px;
           border: 1px solid #c9d1d9;
           border-radius: 8px;
           padding: 0 12px;
           font: inherit;
+          background: #fff;
         }
 
         button {
@@ -952,6 +967,15 @@ function formatOrderStatus(status: OrderStatus) {
     canceled: 'Batal',
   };
   return labels[status];
+}
+
+function formatMenuCategory(category?: MenuCategory) {
+  const labels: Record<MenuCategory, string> = {
+    makanan: 'Makanan',
+    minuman: 'Minuman',
+    snack: 'Snack',
+  };
+  return category ? labels[category] : 'Minuman';
 }
 
 function normalizePaymentMethod(method?: string): MethodFilter {

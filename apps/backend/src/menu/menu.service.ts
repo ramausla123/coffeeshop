@@ -7,6 +7,7 @@ export type MenuItemType = {
   id: number;
   name: string;
   price: number;
+  category: 'makanan' | 'minuman' | 'snack';
   description?: string;
   isAvailable: boolean;
 };
@@ -25,7 +26,7 @@ export class MenuService implements OnModuleInit {
   }
 
   async findAll(): Promise<MenuItem[]> {
-    return this.menuRepository.find({ order: { id: 'ASC' } });
+    return this.menuRepository.find({ order: { category: 'ASC', id: 'ASC' } });
   }
 
   async findById(id: number): Promise<MenuItem | null> {
@@ -48,36 +49,78 @@ export class MenuService implements OnModuleInit {
   }
 
   private async seedDefaultMenu() {
-    const count = await this.menuRepository.count();
-    if (count > 0) return;
-
-    await this.menuRepository.save([
+    const defaultItems: Array<Pick<MenuItem, 'name' | 'price' | 'category' | 'description' | 'isAvailable'>> = [
       {
         name: 'Espresso',
         price: 20000,
+        category: 'minuman',
         description: 'Single shot coffee',
         isAvailable: true,
       },
       {
         name: 'Americano',
         price: 24000,
+        category: 'minuman',
         description: 'Espresso with hot water',
         isAvailable: true,
       },
       {
         name: 'Cappuccino',
         price: 28000,
+        category: 'minuman',
         description: 'Espresso, steamed milk, and foam',
         isAvailable: true,
       },
       {
         name: 'Cafe Latte',
         price: 30000,
+        category: 'minuman',
         description: 'Espresso with steamed milk',
         isAvailable: true,
       },
-    ]);
+      {
+        name: 'Nasi Goreng Kampung',
+        price: 35000,
+        category: 'makanan',
+        description: 'Nasi goreng dengan telur, ayam suwir, dan acar',
+        isAvailable: true,
+      },
+      {
+        name: 'Chicken Katsu Rice',
+        price: 38000,
+        category: 'makanan',
+        description: 'Ayam katsu renyah dengan nasi dan saus pilihan',
+        isAvailable: true,
+      },
+      {
+        name: 'French Fries',
+        price: 22000,
+        category: 'snack',
+        description: 'Kentang goreng renyah dengan saus',
+        isAvailable: true,
+      },
+      {
+        name: 'Roti Bakar Coklat Keju',
+        price: 26000,
+        category: 'snack',
+        description: 'Roti bakar dengan coklat dan keju',
+        isAvailable: true,
+      },
+    ];
 
-    this.logger.log('Created default menu items');
+    let createdCount = 0;
+    for (const item of defaultItems) {
+      const exists = await this.menuRepository.exist({ where: { name: item.name } });
+      if (exists) {
+        await this.menuRepository.update({ name: item.name }, { category: item.category });
+        continue;
+      }
+      await this.menuRepository.save(item);
+      createdCount += 1;
+    }
+
+    if (createdCount > 0) {
+      this.logger.log(`Created ${createdCount} default menu items`);
+    }
   }
 }

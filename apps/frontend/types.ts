@@ -10,6 +10,7 @@ export type MenuItem = {
   id: number;
   name: string;
   price: number;
+  category?: 'makanan' | 'minuman' | 'snack';
   description?: string;
   isAvailable?: boolean;
 };

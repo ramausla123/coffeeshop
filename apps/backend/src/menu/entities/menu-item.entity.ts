@@ -11,6 +11,9 @@ export class MenuItem {
   @Column({ type: 'integer' })
   price!: number;
 
+  @Column({ type: 'varchar', length: 30, default: 'minuman' })
+  category!: 'makanan' | 'minuman' | 'snack';
+
   @Column({ type: 'text', nullable: true })
   description?: string;
 
