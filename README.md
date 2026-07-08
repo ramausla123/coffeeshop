@@ -1,109 +1,150 @@
-# Coffee Shop Starter Monorepo
+# Coffee Shop Monorepo
 
-Starter monorepo containing a Next.js PWA frontend and a NestJS backend using TypeORM with Supabase/Postgres.
+A full-stack coffee shop application with a Next.js frontend and a NestJS backend. It supports ordering, kitchen display, admin management, cashier workflow, and real-time updates.
 
-## Quick Setup
+## What this app does
 
-### 1. Database Setup
+This application is designed for a coffee shop workflow:
 
-The backend is configured for Supabase Postgres by default. Create a Supabase project, then use the direct database connection settings from Project Settings > Database.
+- Customers can browse the menu and place orders
+- Kitchen staff can see incoming orders in real time
+- Admin can manage menu items and categories
+- Cashier can process payments and update order status
+- Staff can change their own password from the account page
 
-Create `.env` in `apps/backend`:
+## Project structure
+
+- Frontend: Next.js app in [apps/frontend](apps/frontend)
+- Backend: NestJS API in [apps/backend](apps/backend)
+- Database migrations: [apps/backend/src/database/migrations](apps/backend/src/database/migrations)
+- Docs: [docs](docs)
+- CI/CD workflows: [.github/workflows](.github/workflows)
+
+## Quick start
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment
+
+Create a file at [apps/backend/.env](apps/backend) with the values from [apps/backend/.env.example](apps/backend/.env.example).
+
+Example backend environment:
 
 ```env
 NODE_ENV=development
 DB_TYPE=postgres
-
-# Option A: Supabase connection string
-# DATABASE_URL=postgresql://postgres:your-database-password@db.your-project-ref.supabase.co:5432/postgres
-
-# Option B: connection parts
-DB_HOST=db.your-project-ref.supabase.co
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=your-database-password
-DB_NAME=postgres
+DATABASE_URL=postgresql://postgres:your-password@host:5432/postgres
 DB_SSL=true
 DB_MIGRATIONS_RUN=false
 JWT_SECRET=change-this-secret-to-a-long-random-string
-MIDTRANS_IS_PRODUCTION=false
-MIDTRANS_SERVER_KEY=SB-Mid-server-your-key
-MIDTRANS_CLIENT_KEY=SB-Mid-client-your-key
 DEFAULT_ADMIN_PASSWORD=change-admin-password
 DEFAULT_KITCHEN_PASSWORD=change-kitchen-password
 DEFAULT_CASHIER_PASSWORD=change-cashier-password
 ```
 
-TypeORM will auto-sync the schema while `NODE_ENV` is not `production`. For production, set `NODE_ENV=production`, keep `synchronize` disabled, and run migrations intentionally.
-
-Optional frontend env:
+Optional frontend environment:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 NEXT_PUBLIC_WS_URL=http://localhost:4000
 ```
 
-### 2. Install Dependencies
+### 3. Run locally
+
+Start the backend:
 
 ```bash
-npm install
+npm --workspace=coffee-backend run start:dev
 ```
 
-### 3. Run Services
-
-Terminal 1 - Frontend (port 3000):
+Start the frontend:
 
 ```bash
-cd apps/frontend
-npm run dev
+npm --workspace=coffee-frontend run dev
 ```
 
-Terminal 2 - Backend (port 4000):
+The backend also serves Socket.IO for real-time updates on the same port as the API.
 
-```bash
-cd apps/backend
-npm run start:dev
-```
+## Main user flows
 
-The backend also serves Socket.io for real-time order updates on the same port as the API.
+- Customer ordering: open the home page and place an order
+- Kitchen display: open /kds to monitor orders
+- Admin panel: open /admin to manage menu items
+- Cashier panel: open /cashier to process orders
+- Account page: open /account to change password
 
-## Features
+## API overview
 
-- Customer Ordering - PWA from table QR (http://localhost:3000)
-- Kitchen Display System - order status screen (http://localhost:3000/kds)
-- Admin Dashboard - menu CRUD + reports (http://localhost:3000/admin)
-- Cashier Dashboard - process payments and print receipts (http://localhost:3000/cashier)
-- Account Settings - staff can change their own password (http://localhost:3000/account)
-- Menu availability - mark menu items as available or sold out
-- Notifications - toast + sound alerts on new orders
-- Real-time updates - Socket.io broadcasts order, status, and payment changes
-- Supabase/Postgres - shared database through TypeORM
-- Default menu seed - starter coffee menu is created when the menu table is empty
+Common backend endpoints:
 
-## API Endpoints
-
+- `GET /health`
 - `GET /menu`, `POST /menu`, `PATCH /menu/:id`, `DELETE /menu/:id`
 - `POST /orders`, `GET /orders`, `GET /orders/:id`
 - `PATCH /orders/:id/status`, `PATCH /orders/:id/payment`
 - `PATCH /orders/:id/cancel`, `PATCH /orders/:id/refund`
 - `POST /auth/login`, `GET /auth/profile`, `POST /auth/change-password`
 
-## Architecture
+## Development notes
 
-- Frontend: Next.js 14 + React 18 + TypeScript
-- Backend: NestJS 10 + TypeORM + Postgres
-- Realtime: Socket.io
-- Database: Supabase Postgres, auto-sync in development, migrations for production
+- The backend uses NestJS, TypeORM, and PostgreSQL/Supabase.
+- The frontend uses Next.js and React.
+- In development, schema sync may happen automatically.
+- In production, use migrations intentionally and keep `NODE_ENV=production`.
 
-See [DATABASE.md](DATABASE.md) for database notes and seeding.
+## Production readiness
 
-## Staff Accounts
+The project includes several production-oriented improvements:
 
-Development fallback accounts are `admin/admin123`, `kitchen/kitchen123`, and `cashier/cashier123`.
-For real use, set the `DEFAULT_*_PASSWORD` values before the first backend start, then change staff passwords from `/account`.
-In production, the backend refuses to start if the default fallback passwords are still used.
+- Health endpoint at `/health`
+- CORS and WebSocket origin configuration
+- Basic rate limiting
+- Error logging hook for monitoring tools such as Sentry
+- Automated test workflow in GitHub Actions
+- Backup and restore guide in [docs/backup-restore.md](docs/backup-restore.md)
 
-## Table QR Links
+## Deployment
+
+The project is designed to work with:
+
+- Frontend: Vercel
+- Backend: Render
+
+For production, configure the following environment variables in your hosting platform:
+
+```env
+NODE_ENV=production
+JWT_SECRET=your-long-random-secret
+DEFAULT_ADMIN_PASSWORD=your-admin-password
+DEFAULT_KITCHEN_PASSWORD=your-kitchen-password
+DEFAULT_CASHIER_PASSWORD=your-cashier-password
+CORS_ORIGINS=https://your-frontend-domain
+NEXT_PUBLIC_API_URL=https://your-backend-domain
+NEXT_PUBLIC_WS_URL=https://your-backend-domain
+```
+
+## Backup and restore
+
+See [docs/backup-restore.md](docs/backup-restore.md) for backup instructions and restore examples.
+
+## Testing
+
+The repository includes a basic automated workflow that builds the project and checks the backend health endpoint.
+
+## Staff accounts
+
+Development fallback accounts are:
+
+- `admin / admin123`
+- `kitchen / kitchen123`
+- `cashier / cashier123`
+
+In production, the backend will refuse to start if these fallback passwords are still being used.
+
+## Table QR links
 
 The ordering page can prefill the table number from a query parameter:
 
